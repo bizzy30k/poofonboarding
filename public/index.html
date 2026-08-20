@@ -1,0 +1,2265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Join the Poof Retail Network</title>
+<meta name="description" content="Tell us your store name. We'll fill in the rest.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="https://js.stripe.com/v3/"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* ── Sampled from the business.poof.ca light-mode screenshot.
+        Font is an approximation: Outfit is the closest match I could identify.
+        Replace --body/--display if the site loads something else. ── */
+  --base:#F6F6F8;            /* page */
+  --surface:#FFFFFF;         /* cards */
+  --surface-2:#F1F1F5;       /* inset panels, poof bubbles */
+  --line:#E8E8EE;
+
+  --magenta:#FF428A;         /* brand pink — fills */
+  --magenta-hover:#F02F7A;
+  --on-accent:#FCFCFC;       /* white on pink, matching the site's buttons */
+  --magenta-text:#C4126A;    /* pink as text on light: 5.8:1 */
+
+  --violet:#B77EFC;
+  --violet-text:#7A34F0;
+  --blue:#489CFC;
+  --blue-text:#1668C7;
+  --verified:#0E7A50;        /* green as text */
+  --verified-fill:#67C8A4;
+  --warn-text:#9A5B00;
+  --danger-text:#C0134E;
+
+  --ink:#0F0F12;             /* headlines, dark pill */
+  --muted:#44444C;           /* body copy */
+  --dim:#74747C;             /* captions, small caps */
+
+  --wash-pink:#F7E2EC;
+  --wash-lilac:#EDE8F9;
+
+  --display:'Outfit',system-ui,sans-serif;
+  --body:'Outfit',system-ui,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,monospace;
+
+  --r-sm:10px; --r-md:14px; --r-lg:20px; --r-pill:999px;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--base);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:16px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+
+/* Ambient wash — one soft magenta bloom behind the thread, nothing more. */
+body::before{
+  content:'';
+  position:fixed; inset:0;
+  background:
+    linear-gradient(180deg, rgba(246,246,248,0) 42%, var(--base) 78%),
+    linear-gradient(100deg, var(--wash-pink) 0%, #F7E8F0 40%, #F2EDF5 66%, var(--wash-lilac) 100%);
+  height:520px; bottom:auto;
+  pointer-events:none; z-index:0;
+}
+
+.shell{
+  position:relative; z-index:1;
+  max-width:1180px;
+  margin:0 auto;
+  padding:28px 20px 64px;
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);
+  gap:36px;
+  align-items:start;
+}
+
+/* ---------- masthead ---------- */
+.masthead{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px}
+.wordmark{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:-.03em;color:var(--ink)}
+.wordmark span{color:var(--magenta)}
+.masthead-note{font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+
+/* ---------- chat thread ---------- */
+.thread{
+  background:var(--surface);
+  border:1px solid var(--line);
+  box-shadow:0 1px 2px rgba(15,15,18,.03), 0 12px 32px rgba(15,15,18,.05);
+  border-radius:var(--r-lg);
+  padding:26px 24px 20px;
+  min-height:60vh;
+  display:flex; flex-direction:column; gap:18px;
+}
+
+.msg{max-width:86%;animation:rise .42s var(--ease) both}
+.msg-poof{align-self:flex-start}
+.msg-them{align-self:flex-end;text-align:right}
+
+.bubble{
+  display:inline-block;
+  padding:13px 17px;
+  border-radius:var(--r-md);
+  font-size:15.5px;
+}
+.msg-poof .bubble{background:var(--surface-2);border:1px solid transparent;border-bottom-left-radius:4px}
+.msg-them .bubble{background:var(--magenta);color:var(--on-accent);font-weight:500;border-bottom-right-radius:4px}
+.bubble strong{font-weight:600}
+
+.msg-poof .bubble.lead{
+  font-family:var(--display);
+  font-size:27px;
+  line-height:1.18;
+  letter-spacing:-.03em;
+  font-weight:700;
+  background:none;border:none;padding:0;
+}
+
+.typing{display:inline-flex;gap:5px;padding:15px 17px;background:var(--surface-2);border:1px solid transparent;border-radius:var(--r-md);border-bottom-left-radius:4px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1.3s infinite}
+.typing i:nth-child(2){animation-delay:.18s}
+.typing i:nth-child(3){animation-delay:.36s}
+
+/* ---------- controls inside the thread ---------- */
+.controls{align-self:stretch;animation:rise .42s var(--ease) both}
+.control-label{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+
+.field{position:relative}
+.field input,.field textarea{
+  width:100%;
+  background:var(--surface);
+  border:1px solid #D6D6DE;
+  border-radius:var(--r-md);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:16px;
+  padding:14px 16px;
+  transition:border-color .2s,box-shadow .2s;
+}
+.field input:focus,.field textarea:focus{
+  outline:none;
+  border-color:var(--magenta);
+  box-shadow:0 0 0 3px rgba(255,61,139,.20);
+}
+.field input::placeholder{color:var(--dim)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.btn{
+  font-family:var(--body);font-size:16px;font-weight:600;
+  padding:14px 26px;border-radius:var(--r-pill);border:1px solid transparent;
+  cursor:pointer;transition:transform .16s var(--ease),background .18s,border-color .18s;
+}
+.btn:focus-visible{outline:2px solid var(--magenta);outline-offset:3px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--magenta);color:var(--on-accent);box-shadow:0 6px 20px rgba(255,66,138,.30)}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px);background:var(--magenta-hover)}
+.btn-ghost{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.btn-ghost:hover{border-color:var(--dim)}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+
+.btn-lg{font-size:17px;padding:16px 34px}
+
+/* typeahead */
+.suggest{
+  margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--surface);overflow:hidden;max-height:280px;overflow-y:auto;
+}
+.suggest:empty{display:none}
+.suggest-empty{padding:14px 15px;font-size:13.5px;color:var(--dim)}
+.suggest-item{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);
+  padding:13px 15px;color:var(--ink);font-family:var(--body);font-size:15px;cursor:pointer;
+}
+.suggest-item:last-child{border-bottom:none}
+.suggest-item:hover,.suggest-item:focus-visible{background:var(--surface-2);outline:none}
+.suggest-meta{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap}
+.suggest-hint{display:block;font-family:var(--mono);font-size:10.5px;color:var(--magenta-text);margin-top:3px}
+
+/* option chips */
+.options{display:flex;flex-direction:column;gap:10px}
+.option{
+  display:flex;gap:13px;align-items:flex-start;
+  padding:15px 16px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--surface);cursor:pointer;text-align:left;width:100%;
+  color:var(--ink);font-family:var(--body);transition:border-color .18s,background .18s;
+}
+.option:hover{border-color:var(--muted)}
+.option:focus-visible{outline:2px solid var(--magenta);outline-offset:2px}
+.option[aria-pressed="true"]{border-color:var(--magenta);background:rgba(255,61,139,.07)}
+.option-mark{
+  flex:0 0 18px;height:18px;margin-top:2px;border:1.5px solid var(--line);border-radius:5px;
+  display:grid;place-items:center;font-size:11px;color:var(--on-accent);
+}
+.option[aria-pressed="true"] .option-mark{background:var(--magenta);border-color:var(--magenta)}
+.option[aria-pressed="true"] .option-mark::after{content:'✓';font-weight:700}
+.option-title{font-weight:600;font-size:15px}
+.option-sub{font-size:13.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+
+/* ---------- store record rail ---------- */
+.rail{position:sticky;top:28px}
+.record{
+  background:var(--surface);
+  border:1px solid var(--line);
+  box-shadow:0 1px 2px rgba(15,15,18,.03), 0 12px 32px rgba(15,15,18,.05);
+  border-radius:var(--r-lg);
+  overflow:hidden;
+}
+.record-head{
+  padding:18px 20px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.record-title{font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.record-count{font-family:var(--mono);font-size:11px;color:var(--magenta)}
+.record-body{padding:6px 20px 20px}
+
+.record-empty{padding:34px 4px;color:var(--dim);font-size:14px;line-height:1.6}
+
+.rec{padding:14px 0;border-bottom:1px solid var(--line);animation:stamp .5s var(--ease) both}
+.rec:last-child{border-bottom:none}
+.rec-key{font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:8px}
+.rec-val{font-size:15px;margin-top:5px;word-break:break-word}
+.rec-val.small{font-size:13.5px;color:var(--muted)}
+
+.src{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  padding:2px 6px;border-radius:4px;border:1px solid var(--line);color:var(--dim);
+}
+.src[data-s="poof"]{color:var(--magenta-text);border-color:rgba(255,61,139,.5)}
+.src[data-s="agco"]{color:var(--blue-text);border-color:rgba(22,104,199,.32)}
+.src[data-s="google"]{color:var(--violet-text);border-color:rgba(122,52,240,.3)}
+.src[data-s="entered"],.src[data-s="you"]{color:var(--muted);border-color:var(--line)}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.chip{
+  font-family:var(--mono);font-size:11px;letter-spacing:.04em;
+  padding:5px 9px;border-radius:6px;border:1px solid var(--line);color:var(--muted);
+  display:inline-flex;align-items:center;gap:6px;
+}
+.chip[data-conf="verified"]{color:var(--verified);border-color:rgba(17,128,85,.35);background:rgba(45,195,130,.10)}
+.chip[data-conf="detected"]{color:var(--muted)}
+.chip .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+.hours-prose{color:var(--ink);line-height:1.5}
+
+/* inline single-choice options sit tighter than the descriptive ones */
+.option-inline{align-items:center;padding:12px 15px}
+.option-inline .option-title{font-weight:500}
+.options-scroll{max-height:300px;overflow-y:auto;padding-right:4px}
+
+/* end-of-flow summary */
+.summary{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);overflow:hidden}
+.summary-row{display:grid;grid-template-columns:150px 1fr;gap:14px;padding:11px 16px;border-bottom:1px solid var(--line)}
+.summary-row:last-child{border-bottom:none}
+.summary-key{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding-top:3px}
+.summary-val{font-size:14.5px;line-height:1.5}
+@media (max-width:560px){
+  .summary-row{grid-template-columns:1fr;gap:3px}
+  .summary-key{padding-top:0}
+}
+
+.rec-foot{margin:16px 0 0;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--dim);line-height:1.5}
+
+.rec-edit{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.rec-edit-label{font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
+.rec-edit-btns{display:flex;flex-wrap:wrap;gap:6px}
+.rec-edit-btn{
+  font-family:var(--body);font-size:12.5px;font-weight:500;
+  padding:6px 12px;border-radius:var(--r-pill);
+  border:1px solid var(--line);background:var(--surface);color:var(--muted);
+  cursor:pointer;transition:border-color .16s,color .16s;
+}
+.rec-edit-btn:hover{border-color:var(--magenta);color:var(--magenta-text)}
+.rec-edit-btn:focus-visible{outline:2px solid var(--magenta);outline-offset:2px}
+
+.loc{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.loc:last-child{border-bottom:none}
+.loc-name{font-size:14px}
+.loc-addr{font-size:12.5px;color:var(--dim);margin-top:1px}
+
+.credit-note{
+  margin-top:14px;padding:12px 14px;border-radius:var(--r-sm);
+  background:rgba(45,195,130,.10);border:1px solid rgba(17,128,85,.3);
+  font-size:13.5px;color:var(--verified);line-height:1.5;
+}
+.credit-note b{color:var(--verified)}
+
+.error{
+  margin-top:10px;padding:11px 14px;border-radius:var(--r-sm);
+  background:rgba(255,61,139,.08);border:1px solid rgba(196,18,106,.3);
+  color:var(--danger-text);font-size:14px;
+}
+
+.fineprint{margin-top:14px;font-size:12.5px;color:var(--dim);line-height:1.55}
+
+/* ---------- value beat ---------- */
+.valueprops{display:flex;flex-direction:column;gap:2px;margin-bottom:14px;
+            border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:6px}
+.vp{display:flex;gap:12px;align-items:flex-start;padding:12px 13px}
+.vp-dot{flex:0 0 8px;height:8px;border-radius:50%;margin-top:7px}
+.vp b{display:block;font-size:14.5px;font-weight:600}
+.vp span{display:block;font-size:13.5px;color:var(--muted);line-height:1.5;margin-top:2px}
+
+/* ---------- chipsets (stack + delivery) ---------- */
+.stack-group{margin-bottom:18px}
+.chipset{display:flex;flex-wrap:wrap;gap:8px}
+.chipbtn{
+  font-family:var(--body);font-size:14.5px;font-weight:500;
+  padding:10px 17px;border-radius:var(--r-pill);
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  cursor:pointer;transition:border-color .16s,background .16s,color .16s;
+}
+.chipbtn:hover{border-color:var(--dim)}
+.chipbtn:focus-visible{outline:2px solid var(--magenta);outline-offset:2px}
+.chipbtn.on{background:var(--magenta);border-color:var(--magenta);color:var(--on-accent)}
+.chip-other{margin-top:10px}
+
+/* ---------- progress ---------- */
+#progress{display:flex;align-items:center;gap:12px}
+.prog-label{font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.prog-track{display:inline-flex;gap:4px}
+.prog-track i{width:18px;height:4px;border-radius:2px;background:var(--line);display:block}
+.prog-track i.done{background:var(--magenta);opacity:.45}
+.prog-track i.now{background:var(--magenta)}
+@media (max-width:560px){.prog-label{display:none}}
+
+/* ---------- closing timeline ---------- */
+.timeline{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:6px 8px;margin-bottom:14px}
+.tl{display:flex;gap:14px;align-items:flex-start;padding:12px 12px;position:relative}
+.tl::before{content:'';position:absolute;left:17px;top:28px;bottom:-6px;width:1.5px;background:var(--line)}
+.tl:last-child::before{display:none}
+.tl-node{flex:0 0 11px;height:11px;border-radius:50%;margin-top:5px;background:var(--surface-2);
+         border:2px solid var(--line);position:relative;z-index:1}
+.tl.done .tl-node{background:var(--verified-fill);border-color:var(--verified-fill)}
+.tl.next .tl-node{background:var(--magenta);border-color:var(--magenta);
+                  box-shadow:0 0 0 4px rgba(255,66,138,.16)}
+.tl b{display:block;font-size:14.5px;font-weight:600}
+.tl.done b{color:var(--muted)}
+.tl span{display:block;font-size:13px;color:var(--muted);line-height:1.5;margin-top:2px}
+
+/* ---------- terms acceptance ---------- */
+.reassure{background:var(--base);border:1px solid var(--line);border-radius:var(--r-sm);
+          padding:14px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:9px}
+.rz{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.5;color:var(--muted)}
+.rz b{color:var(--ink);font-weight:600}
+.rz-lead{padding-bottom:9px;border-bottom:1px solid var(--line)}
+.rz-lead b{color:var(--verified)}
+.rz-tick{flex:0 0 auto;color:var(--verified);font-weight:700;font-size:12px;margin-top:1px}
+.terms{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:18px 20px}
+.tickrow{display:flex;gap:12px;align-items:flex-start;cursor:pointer;padding:9px 0}
+.tickrow input{position:absolute;opacity:0;width:0;height:0}
+.tickbox{flex:0 0 20px;height:20px;margin-top:1px;border:1.5px solid #C9C9D2;border-radius:6px;
+         background:var(--base);display:grid;place-items:center;transition:background .16s,border-color .16s}
+.tickbox::after{content:'✓';font-size:12px;font-weight:700;color:var(--on-accent);opacity:0;transition:opacity .16s}
+.tickrow input:checked + .tickbox{background:var(--magenta);border-color:var(--magenta)}
+.tickrow input:checked + .tickbox::after{opacity:1}
+.tickrow input:focus-visible + .tickbox{outline:2px solid var(--magenta);outline-offset:2px}
+.ticktext{font-size:14px;line-height:1.55;color:var(--muted)}
+.ticktext strong{color:var(--ink)}
+.ticktext a{color:var(--magenta-text);font-weight:600}
+
+/* ---------- coverage map ---------- */
+.mapwrap{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:20px;
+         background:rgba(15,15,18,.55);backdrop-filter:blur(4px);
+         opacity:0;transition:opacity .26s var(--ease)}
+.mapwrap.in{opacity:1}
+.mapcard{position:relative;width:min(1000px,100%);max-height:94vh;overflow:auto;
+         background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+         box-shadow:0 24px 70px rgba(15,15,18,.22);padding:30px 30px 22px;
+         transform:translateY(10px);transition:transform .3s var(--ease)}
+.mapwrap.in .mapcard{transform:none}
+.mapclose{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;
+          border:1px solid var(--line);background:var(--base);color:var(--muted);
+          font-size:14px;cursor:pointer;line-height:1;z-index:5}
+.mapclose:hover{color:var(--ink);border-color:var(--dim)}
+
+.maphead h2{margin:0 0 8px;font-family:var(--display);font-size:27px;letter-spacing:-.03em;font-weight:700}
+.maphead p{margin:0 0 18px;color:var(--muted);font-size:15px;line-height:1.6;max-width:660px}
+
+/* headline number + toggle */
+.covbar{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
+        border:1px solid var(--line);border-radius:var(--r-md);background:var(--base);
+        padding:16px 20px;margin-bottom:14px;transition:border-color .25s,background .25s}
+.covbar.on{border-color:rgba(255,66,138,.35);background:rgba(255,66,138,.045)}
+.covstat b{display:block;font-family:var(--display);font-size:34px;font-weight:700;
+           letter-spacing:-.03em;line-height:1.05;color:var(--ink);transition:color .25s}
+.covbar.on .covstat b{color:var(--magenta-text)}
+.covstat span{display:block;font-size:13.5px;color:var(--muted);margin-top:3px}
+
+.toggle{display:inline-flex;align-items:center;gap:11px;cursor:pointer;user-select:none}
+.toggle input{position:absolute;opacity:0;width:0;height:0}
+.toggle .tk{width:46px;height:26px;border-radius:999px;background:var(--line);
+            position:relative;transition:background .22s var(--ease);flex:0 0 46px}
+.toggle .tk i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+              background:var(--surface);box-shadow:0 1px 3px rgba(15,15,18,.25);
+              transition:transform .22s var(--ease)}
+.toggle input:checked + .tk{background:var(--magenta)}
+.toggle input:checked + .tk i{transform:translateX(20px)}
+.toggle input:focus-visible + .tk{outline:2px solid var(--magenta);outline-offset:3px}
+.toggle .tl{font-size:14.5px;font-weight:600;color:var(--muted)}
+.toggle input:checked ~ .tl{color:var(--ink)}
+
+.mapstage{position:relative;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+#leaf{height:min(56vh,520px);width:100%;background:#EDEDF2}
+.maploading{position:absolute;inset:0;display:grid;place-items:center;
+            background:var(--surface);color:var(--dim);font-size:14px;z-index:500}
+
+/* Leaflet overrides, so it reads as part of the flow rather than a bolted-on widget */
+.leaflet-container{font-family:var(--body)}
+.leaflet-control-zoom a{border-radius:8px!important;color:var(--muted)!important;
+                        border-color:var(--line)!important}
+.leaflet-control-zoom a:hover{color:var(--ink)!important}
+.leaflet-tooltip{border-radius:8px;border:1px solid var(--line);
+                 box-shadow:0 4px 14px rgba(15,15,18,.14);font-size:12.5px;padding:7px 10px}
+.leaflet-control-attribution{font-size:10px;background:rgba(255,255,255,.78)}
+.cell{animation:cellin .5s var(--ease) both}
+@keyframes cellin{from{opacity:0}to{opacity:1}}
+
+.mapfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px 22px;padding-top:14px;
+         border-top:1px solid var(--line);margin-top:14px;font-size:12.5px;color:var(--dim)}
+.lg{display:inline-flex;align-items:center;gap:7px}
+.lg i{width:10px;height:10px;border-radius:50%;display:block}
+.lg-you{background:var(--magenta);box-shadow:0 0 0 2.5px #fff, 0 0 0 3.5px var(--magenta)}
+.lg-cell{background:rgba(255,66,138,.18);border:1.5px dashed var(--magenta)}
+.lg-note{margin-left:auto;font-style:italic}
+
+@media (max-width:720px){
+  .mapcard{padding:22px 16px 16px}
+  .maphead h2{font-size:22px}
+  .covbar{padding:14px 16px}
+  .covstat b{font-size:27px}
+  .lg-note{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){.cell{animation:none}}
+
+/* ---------- animations ---------- */
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes stamp{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+@keyframes blink{0%,60%,100%{opacity:.3}30%{opacity:1}}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+
+
+/* embedded Stripe */
+.quote{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:16px 18px;margin-bottom:12px}
+.qline{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:5px 0;color:var(--muted)}
+.qline span:last-child{font-family:var(--mono);font-size:13px}
+.qline-credit{color:var(--verified)}
+.qline-total{margin-top:8px;padding-top:11px;border-top:1px solid var(--line);color:var(--ink);font-weight:600;font-size:16px}
+.qline-total span:last-child{font-size:16px;color:var(--verified)}
+.qline-note{font-size:12.5px;color:var(--dim)}
+.stripe-mount{border:1px solid var(--line);border-radius:var(--r-md);background:#fff;padding:4px;min-height:320px}
+
+/* ---------- mobile ---------- */
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr;gap:20px;padding:20px 14px 48px}
+  .rail{position:static;order:-1}
+  .record-body{max-height:min(46vh,380px);overflow-y:auto}
+  .msg{max-width:94%}
+  .msg-poof .bubble.lead{font-size:21px}
+  .field-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<main class="shell">
+  <header class="masthead">
+    <div class="wordmark">poof<span>.</span></div>
+    <div id="progress"></div>
+  </header>
+
+  <section class="thread" id="thread" aria-live="polite" aria-label="Onboarding conversation"></section>
+
+  <aside class="rail">
+    <div class="record">
+      <div class="record-head">
+        <div class="record-title">Store record</div>
+        <div class="record-count" id="recordCount"></div>
+      </div>
+      <div class="record-body" id="record">
+        <p class="record-empty">Nothing here yet. Once you give us a store name we'll pull what's already on record and you can correct anything we get wrong.</p>
+      </div>
+    </div>
+    <p class="fineprint">We check the Poof POS index, the AGCO retail register, and public listings. You confirm every field before anything goes live.</p>
+  </aside>
+</main>
+
+<script type="module">
+/* =====================================================================
+   Poof retailer onboarding — conversational flow controller
+   ===================================================================== */
+
+const thread = document.getElementById('thread');
+const record = document.getElementById('record');
+const recordCount = document.getElementById('recordCount');
+
+const state = {
+  storeName: null,
+  bannerId: null,
+  bannerIds: [],
+  locationIds: [],
+  profile: null,
+  confirmedLocations: [],
+  goals: ['adnetwork'],   // the only paid surface today
+  referralCode: null,
+  contact: { name: '', email: '', phone: '' },
+  done: new Set(),
+  pendingRewind: null,
+  // Vendor answers only — never credentials. API keys are collected later,
+  // in the authenticated admin panel.
+  stack: {
+    pos: null, posOther: null,
+    payment: null, paymentOther: null,
+    ecommerce: null, ecommerceOther: null,
+    delivers: null, deliverySoftware: null, deliveryOther: null, wantsDelivery: null
+  }
+};
+
+
+
+/* ---------- thread primitives ---------- */
+
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+function scrollDown() {
+  requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }));
+}
+
+function say(html, { lead = false } = {}) {
+  const el = document.createElement('div');
+  el.className = 'msg msg-poof';
+  el.innerHTML = `<div class="bubble${lead ? ' lead' : ''}">${html}</div>`;
+  thread.appendChild(el);
+  scrollDown();
+  return el;
+}
+
+function reply(text) {
+  const el = document.createElement('div');
+  el.className = 'msg msg-them';
+  el.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+  thread.appendChild(el);
+  scrollDown();
+}
+
+async function typing(ms = 700) {
+  const el = document.createElement('div');
+  el.className = 'msg msg-poof';
+  el.innerHTML = '<div class="typing"><i></i><i></i><i></i></div>';
+  thread.appendChild(el);
+  scrollDown();
+  await wait(ms);
+  el.remove();
+}
+
+/**
+ * Rewind: lets the person step back and correct an earlier answer.
+ *
+ * Implemented by rejecting whatever control is currently awaiting input, which
+ * unwinds the step function without every step needing to know about it. The
+ * runner catches it, truncates the thread back to that step's mark, and
+ * re-runs from there.
+ */
+class Rewind { constructor(step) { this.step = step; } }
+let activeReject = null;
+
+/** Renders a control block and resolves when the user acts on it. */
+function control(builder) {
+  return new Promise((resolve, reject) => {
+    // A rewind requested mid-animation lands here instead of being swallowed.
+    if (state.pendingRewind) {
+      const step = state.pendingRewind;
+      state.pendingRewind = null;
+      return reject(new Rewind(step));
+    }
+    const el = document.createElement('div');
+    el.className = 'controls';
+    thread.appendChild(el);
+    scrollDown();
+    activeReject = reject;
+    builder(el, value => {
+      activeReject = null;
+      el.remove();
+      resolve(value);
+    });
+  });
+}
+
+function requestRewind(step) {
+  if (activeReject) {
+    const reject = activeReject;
+    activeReject = null;
+    reject(new Rewind(step));
+  } else {
+    state.pendingRewind = step;   // picked up by the next control()
+  }
+}
+
+const escapeHtml = (s = '') => String(s).replace(/[&<>"']/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- store record rail ---------- */
+
+const SOURCE_LABEL = { agco: 'AGCO', google: 'Google', poof: 'Poof index', entered: 'You', you: 'You' };
+const STATUS_LABEL = { authorized: 'Authorized to open', pending: 'Application in progress', cancelled: 'Licence cancelled', unknown: 'Not on file' };
+
+function renderRecord() {
+  const p = state.profile;
+  if (!p) return;
+
+  const rows = [];
+  const push = (key, valueHtml, source) => {
+    if (!valueHtml) return;
+    rows.push(`
+      <div class="rec">
+        <div class="rec-key">${key}${source ? `<span class="src" data-s="${source}">${SOURCE_LABEL[source] || source}</span>` : ''}</div>
+        <div class="rec-val">${valueHtml}</div>
+      </div>`);
+  };
+
+  push('Store', escapeHtml(p.storeName?.value || ''), p.storeName?.source);
+
+  if (p.status?.overall && p.status.overall !== 'unknown') {
+    const s = p.status.overall;
+    const colour = s === 'authorized' ? 'var(--verified)' : s === 'pending' ? 'var(--warn-text)' : 'var(--danger-text)';
+    push('AGCO status',
+      `<span style="color:${colour}">${STATUS_LABEL[s]}</span>` +
+      (p.status.authorized > 1 ? ` <span style="color:var(--dim)">· ${p.status.authorized} stores</span>` : ''),
+      'agco');
+  }
+
+  if (p.licenceNumber?.value)
+    push('Licence', `<span style="font-family:var(--mono);font-size:13.5px">${escapeHtml(p.licenceNumber.value)}</span>`, p.licenceNumber.source);
+  if (p.locations?.length === 1)
+    push('Address', escapeHtml(p.address?.value || ''), p.address?.source);
+  push('Phone', escapeHtml(p.phone?.value || ''), p.phone?.source);
+  if (p.website?.value)
+    push('Website', `<a href="${escapeHtml(p.website.value)}" target="_blank" rel="noopener" style="color:var(--muted)">${escapeHtml(p.website.value.replace(/^https?:\/\//, ''))}</a>`, p.website.source);
+
+  if (p.hours?.prose)
+    push('Hours', `<span class="hours-prose">${escapeHtml(p.hours.prose)}</span>`, p.hours.source);
+
+  if (p.rating?.value)
+    push('Google rating', `${p.rating.value} ★ <span style="color:var(--dim)">· ${p.rating.count} reviews</span>`, 'google');
+
+  const locs = state.confirmedLocations?.length ? state.confirmedLocations : (p.locations || []);
+  if (locs.length > 1) {
+    const shown = locs.slice(0, 8);
+    rows.push(`
+      <div class="rec">
+        <div class="rec-key">Locations<span class="src" data-s="agco">${locs.length}</span></div>
+        <div>${shown.map(l => `
+          <div class="loc">
+            <div>
+              <div class="loc-name">${escapeHtml(l.name)}</div>
+              <div class="loc-addr">${escapeHtml(l.address || '')}</div>
+            </div>
+          </div>`).join('')}
+          ${locs.length > shown.length ? `<div class="loc-addr" style="padding-top:9px">+ ${locs.length - shown.length} more</div>` : ''}
+        </div>
+      </div>`);
+  }
+
+  if (p.stack?.length) {
+    rows.push(`
+      <div class="rec">
+        <div class="rec-key">POS &amp; payments</div>
+        <div class="chips">${p.stack.map(s => `
+          <span class="chip" data-conf="${s.source}"><span class="dot"></span>${escapeHtml(s.label)}</span>`).join('')}
+        </div>
+        <div class="rec-val small" style="margin-top:8px">
+          ${p.stack.some(s => s.source === 'verified')
+            ? 'Green means we already have a live connection to that system.'
+            : 'Detected from your site — we\'ll confirm during setup.'}
+        </div>
+      </div>`);
+  }
+
+  const declared = [];
+  if (state.stack.pos) declared.push(['POS', posLabel()]);
+  if (state.stack.payment) declared.push(['Payments', payLabel()]);
+  if (state.stack.ecommerce) declared.push(['E-commerce', ecomLabel()]);
+  if (state.stack.delivers !== null) {
+    declared.push(['Delivery', state.stack.delivers
+      ? (delLabel() || 'Yes')
+      : state.stack.wantsDelivery ? 'No — interested' : 'No']);
+  }
+  if (declared.length) {
+    rows.push(`
+      <div class="rec">
+        <div class="rec-key">Your systems<span class="src" data-s="you">You</span></div>
+        <div class="chips">${declared.map(([k, v]) => `<span class="chip">${escapeHtml(k)}: ${escapeHtml(v)}</span>`).join('')}</div>
+      </div>`);
+  }
+
+  if (state.referralCode) {
+    rows.push(`<div class="credit-note"><b>${escapeHtml(state.referralCode)}</b> applied — three months of credit, confirmed at checkout.</div>`);
+  }
+
+  const editable = STEPS.filter(s => s[2] && state.done.has(s[0]));
+  if (editable.length) {
+    rows.push(`
+      <div class="rec-edit">
+        <div class="rec-edit-label">Change an answer</div>
+        <div class="rec-edit-btns">
+          ${editable.map(s => `<button type="button" class="rec-edit-btn" data-step="${s[0]}">${escapeHtml(s[2])}</button>`).join('')}
+        </div>
+      </div>`);
+  }
+
+  rows.push('<p class="rec-foot">Everything here is editable in your admin panel after signup.</p>');
+
+  record.innerHTML = rows.join('');
+  record.querySelectorAll('.rec-edit-btn').forEach(b =>
+    b.addEventListener('click', () => requestRewind(b.dataset.step)));
+  const integrated = p.coverage?.integrated || 0;
+  recordCount.textContent = integrated ? `${integrated} connected` : '';
+}
+
+/* ---------- API ---------- */
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+  return data;
+}
+
+/* =====================================================================
+   Flow
+   ===================================================================== */
+
+const STEPS = [
+  ['store',    askStoreName,    'Store'],
+  ['enrich',   enrich,          null],
+  ['confirm',  confirmProfile,  null],
+  ['value',    valueBeat,       null],
+  ['location', confirmLocation, 'Locations'],
+  ['stack',    askStack,        'Systems'],
+  ['delivery', askDelivery,     'Delivery'],
+  ['referral', askReferral,     'Referral'],
+  ['contact',  askContact,      'Contact'],
+  ['summary',  showSummary,     null],
+  ['terms',    acceptTerms,     null],
+  ['payment',  toPayment,       null]
+];
+
+/** Six visible phases, for the progress indicator. */
+const PHASES = [
+  ['Store',     ['store', 'enrich', 'confirm', 'value']],
+  ['Locations', ['location']],
+  ['Systems',   ['stack']],
+  ['Delivery',  ['delivery']],
+  ['Details',   ['referral', 'contact']],
+  ['Payment',   ['summary', 'terms', 'payment']]
+];
+
+function renderProgress(stepId) {
+  const el = document.getElementById('progress');
+  if (!el) return;
+  const i = PHASES.findIndex(ph => ph[1].includes(stepId));
+  if (i < 0) return;
+  el.innerHTML = `
+    <span class="prog-label">Step ${i + 1} of ${PHASES.length} · ${PHASES[i][0]}</span>
+    <span class="prog-track">${PHASES.map((_, k) =>
+      `<i class="${k < i ? 'done' : k === i ? 'now' : ''}"></i>`).join('')}</span>`;
+}
+
+const marks = {};
+
+async function run() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('onboarding') === 'complete') return finished();
+  if (params.get('onboarding') === 'cancelled') return cancelled();
+
+  say('Your store is already on Poof.', { lead: true });
+  await wait(280);
+  say('Every licensed store in Ontario is listed on our marketplace — name and location. Shoppers can find you. They just can\'t buy from you yet.');
+  await wait(280);
+  say('Let\'s turn that on. Takes about two minutes, and we\'ll fill in most of it for you.');
+
+  let i = 0;
+  let resumeAt = null;   // where to jump back to once a correction is done
+  let spanEnd = null;    // last step of the correction
+
+  while (i < STEPS.length) {
+    const [id, fn] = STEPS[i];
+    marks[id] = thread.children.length;
+    renderProgress(id);
+    try {
+      await fn();
+      state.done.add(id);
+      renderRecord();
+
+      // Finished a correction — pick up where the conversation left off.
+      if (spanEnd !== null && i >= spanEnd) {
+        const back = resumeAt;
+        resumeAt = null; spanEnd = null;
+        await typing(380);
+        say('Updated. Picking up where we were.');
+        i = back;
+        continue;
+      }
+      i++;
+    } catch (err) {
+      if (!(err instanceof Rewind)) throw err;
+
+      const target = STEPS.findIndex(s => s[0] === err.step);
+      if (target < 0) { i++; continue; }
+
+      // Nothing already answered is thrown away and nothing is removed from the
+      // thread — the correction is appended, so the conversation reads as one
+      // continuous exchange rather than rewinding and losing history.
+      clearOnly(err.step);
+      renderRecord();
+
+      const endId = REWIND_SPAN[err.step] || err.step;
+      spanEnd = STEPS.findIndex(s => s[0] === endId);
+      resumeAt = Math.max(i, resumeAt ?? 0);
+      i = target;
+
+      await typing(360);
+      say(`Sure — let's redo ${escapeHtml(REWIND_LABEL[err.step] || 'that')}.`);
+    }
+  }
+}
+
+/**
+ * Changing the store name invalidates the lookup, so that correction re-runs
+ * through the readback. Every other correction re-asks only its own question.
+ */
+const REWIND_SPAN = { store: 'value' };
+
+const REWIND_LABEL = {
+  store: 'the store search', location: 'your locations', stack: 'your systems',
+  delivery: 'the delivery question', referral: 'the referral code',
+  contact: 'your contact details'
+};
+
+/** Clear only the answers belonging to this step. */
+function clearOnly(step) {
+  if (step === 'store') {
+    state.storeName = null; state.bannerId = null; state.bannerIds = []; state.locationIds = [];
+    state.profile = null; state.confirmedLocations = [];
+  }
+  if (step === 'location') state.confirmedLocations = [];
+  if (step === 'stack') {
+    state.stack.pos = state.stack.posOther = null;
+    state.stack.payment = state.stack.paymentOther = null;
+    state.stack.ecommerce = state.stack.ecommerceOther = null;
+  }
+  if (step === 'delivery') {
+    state.stack.delivers = state.stack.deliverySoftware = null;
+    state.stack.deliveryOther = null; state.stack.wantsDelivery = null;
+  }
+  if (step === 'referral') state.referralCode = null;
+  if (step === 'contact') state.contact = { name: '', email: '', phone: '' };
+}
+
+/** Store search with typeahead. Shared by the first question and "add another store". */
+function storeSearchControl(labelText, placeholder, excludeIds = []) {
+  return control((el, done) => {
+    el.innerHTML = `
+      <div class="control-label">${escapeHtml(labelText)}</div>
+      <div class="field">
+        <input type="text" id="storeInput" autocomplete="organization" placeholder="${escapeHtml(placeholder)}" aria-label="${escapeHtml(labelText)}">
+      </div>
+      <div class="suggest" id="suggest" role="listbox"></div>
+      <div class="btn-row"><button class="btn btn-primary" type="button" id="storeGo" disabled>Continue</button></div>`;
+
+    const input = el.querySelector('#storeInput');
+    const list = el.querySelector('#suggest');
+    const go = el.querySelector('#storeGo');
+    let timer;
+    input.focus();
+
+    input.addEventListener('input', () => {
+      go.disabled = input.value.trim().length < 2;
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const q = input.value.trim();
+        if (q.length < 2) { list.innerHTML = ''; return; }
+        try {
+          const qs = new URLSearchParams({ q });
+          if (excludeIds.length) qs.set('exclude', excludeIds.join(','));
+          const { candidates } = await api(`/api/lookup?${qs}`);
+          if (!candidates.length) {
+            list.innerHTML = `<div class="suggest-empty">No matches${excludeIds.length ? ' we haven\'t already added' : ''}. Try the address or CRSA number.</div>`;
+            return;
+          }
+          list.innerHTML = candidates.map(c => {
+            const where = c.city ? c.city : c.cityCount > 1 ? `${c.cityCount} cities` : '';
+            const meta = c.allCancelled
+              ? 'licence cancelled'
+              : `${c.locationCount} ${c.locationCount === 1 ? 'location' : 'locations'}`
+                + (c.pendingCount && !c.authorizedCount ? ' · pending' : '')
+                + (c.integrated ? ' · connected' : '');
+            let hint = '';
+            const n = (c.matchedLocations || []).length;
+            if (c.alreadyAdded) hint = `${c.alreadyAdded} already on your list`;
+            else if (c.matchedVia === 'licence' && n) hint = `licence ${c.matchedLocations[0].licenceNumber}`;
+            else if ((c.matchedVia === 'postal' || c.matchedVia === 'address') && n) hint = c.matchedLocations[0].address;
+            else if (c.matchedVia === 'city' && c.cityMatches) hint = `${c.cityMatches} in ${c.matchedLabel}`;
+            else if (c.matchedVia === 'name' && n === 1) hint = c.matchedLocations[0].city;
+            return `
+            <button class="suggest-item" type="button" role="option"
+              data-banner="${escapeHtml(c.bannerId)}"
+              data-name="${escapeHtml(c.name)}"
+              data-locs="${escapeHtml((c.matchedLocations || []).map(l => l.id).join(','))}">
+              <span>${escapeHtml(c.name)}${where ? ` <span style="color:var(--dim)">· ${escapeHtml(where)}</span>` : ''}
+                ${hint ? `<span class="suggest-hint">${escapeHtml(hint)}</span>` : ''}
+              </span>
+              <span class="suggest-meta"${c.allCancelled ? ' style="color:var(--danger-text)"' : ''}>${meta}</span>
+            </button>`;
+          }).join('');
+        } catch { list.innerHTML = ''; }
+      }, 220);
+    });
+
+    list.addEventListener('click', e => {
+      const btn = e.target.closest('.suggest-item');
+      if (!btn) return;
+      done({
+        name: btn.dataset.name,
+        bannerId: btn.dataset.banner,
+        locationIds: btn.dataset.locs ? btn.dataset.locs.split(',').filter(Boolean) : []
+      });
+    });
+
+    const submit = () => {
+      if (input.value.trim().length < 2) return;
+      done({ name: input.value.trim(), bannerId: null, locationIds: [] });
+    };
+    go.addEventListener('click', submit);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+  });
+}
+
+/* --- step 1: store name with typeahead --- */
+
+async function askStoreName() {
+  await typing(600);
+  say('What\'s your store called? You can also search by address or CRSA licence number.');
+
+  const picked = await storeSearchControl('Store name', 'Store name, address, or CRSA number');
+  state.storeName = picked.name;
+  state.bannerId = picked.bannerId;
+  state.bannerIds = picked.bannerId ? [picked.bannerId] : [];
+  state.locationIds = picked.locationIds;
+  reply(picked.name);
+
+  await offerRelatedBanners();
+}
+
+/**
+ * Some businesses are split across several banners in the AGCO register because
+ * a branch is named after a neighbourhood rather than its city — Kindling
+ * Cannabis is nine separate banners covering sixteen stores. Rather than merge
+ * them automatically (many really are separate franchisees), surface them and
+ * let the retailer say which are theirs.
+ */
+async function offerRelatedBanners() {
+  if (!state.bannerId) return;
+
+  let related = [];
+  try {
+    const r = await api(`/api/lookup?related=${encodeURIComponent(state.bannerId)}`);
+    related = (r.related || []).filter(x => !x.allCancelled);
+  } catch { return; }
+  if (!related.length) return;
+
+  const doors = related.reduce((n, r) => n + r.locationCount, 0);
+
+  await typing(600);
+  say(`Quick check — the register also lists <strong>${related.length} other ${related.length === 1 ? 'store' : 'stores'}</strong> under a name close to yours. Some operators are listed this way when a branch is named after its neighbourhood rather than its city.`);
+  await wait(230);
+  say('Any of these yours?');
+
+  const chosen = await control((el, done) => {
+    el.innerHTML = `
+      <div class="control-label">Also on the register</div>
+      <div class="options options-scroll">
+        ${related.map((r, i) => `
+          <button class="option" type="button" aria-pressed="false" data-i="${i}">
+            <span class="option-mark" aria-hidden="true"></span>
+            <span><span class="option-title">${escapeHtml(r.name)}</span>
+              <span class="option-sub">${r.locationCount} ${r.locationCount === 1 ? 'location' : 'locations'} · ${escapeHtml(r.cities.join(', '))}${r.cityCount > 3 ? ' and more' : ''}</span>
+            </span>
+          </button>`).join('')}
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" id="relGo">Add selected</button>
+        <button class="btn btn-ghost" type="button" id="relAll">All ${related.length} are ours</button>
+        <button class="btn btn-ghost" type="button" id="relNone">None of these</button>
+      </div>`;
+
+    const chosenSet = new Set();
+    const go = el.querySelector('#relGo');
+    go.disabled = true;
+    el.querySelectorAll('.option').forEach(b => b.addEventListener('click', () => {
+      const on = b.getAttribute('aria-pressed') === 'true';
+      b.setAttribute('aria-pressed', String(!on));
+      on ? chosenSet.delete(+b.dataset.i) : chosenSet.add(+b.dataset.i);
+      go.disabled = chosenSet.size === 0;
+    }));
+    go.addEventListener('click', () => done([...chosenSet].map(i => related[i])));
+    el.querySelector('#relAll').addEventListener('click', () => done(related));
+    el.querySelector('#relNone').addEventListener('click', () => done([]));
+  });
+
+  if (!chosen.length) { reply('None of these'); return; }
+
+  state.bannerIds = [...new Set([...state.bannerIds, ...chosen.map(c => c.bannerId)])];
+  reply(chosen.length === related.length
+    ? `All ${related.length} are ours`
+    : chosen.map(c => c.name).join(', '));
+
+  const added = chosen.reduce((n, c) => n + c.locationCount, 0);
+  await typing(380);
+  say(`Added — that's ${added} more ${added === 1 ? 'store' : 'stores'} on the record.`);
+}
+
+/* --- step 2: enrichment --- */
+
+async function enrich() {
+  await typing(400);
+  const note = say('Give me a second — checking the AGCO register and looking you up on Google…');
+
+  try {
+    const qs = new URLSearchParams({ name: state.storeName });
+    if (state.bannerIds.length) qs.set('bannerIds', state.bannerIds.join(','));
+    else if (state.bannerId) qs.set('bannerId', state.bannerId);
+
+    const { profile } = await api(`/api/lookup?${qs}`);
+    state.profile = profile;
+    state.confirmedLocations = profile.locations || [];
+    renderRecord();
+    note.remove();
+  } catch (err) {
+    state.profile = blankProfile(state.storeName);
+    renderRecord();
+    note.querySelector('.bubble').innerHTML = 'Our lookup is having a moment, so let\'s do this the manual way. It\'s still quick.';
+  }
+}
+
+const blankProfile = name => ({
+  storeName: { value: name, source: 'entered' },
+  licenceNumber: { value: null, source: null },
+  address: { value: null, source: null },
+  website: { value: null, source: null },
+  phone: { value: null, source: null },
+  hours: { value: null, prose: null, source: null },
+  rating: null,
+  locations: [],
+  stack: [],
+  status: { authorized: 0, pending: 0, cancelled: 0, overall: 'unknown' },
+  coverage: { known: 0, integrated: 0 }
+});
+
+/* --- step 3: conversational readback + confirm --- */
+
+async function confirmProfile() {
+  const p = state.profile;
+  const locs = p.locations || [];
+  const st = p.status || {};
+
+  if (!locs.length) {
+    await typing(500);
+    say('I couldn\'t find you in the AGCO register under that name — no problem, we\'ll build the record together. It\'s a few extra fields, that\'s all.');
+    await manualCorrections();
+    return;
+  }
+
+  /* --- who and where --- */
+  await typing(650);
+  const cities = [...new Set(locs.map(l => l.name))];
+  const joinCities = list => list.length === 1 ? list[0]
+    : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
+
+  if (locs.length === 1) {
+    say(`Here's what I've got. <strong>${escapeHtml(p.storeName.value)}</strong> at ${escapeHtml(p.address.value || cities[0])}.`);
+  } else if (cities.length > 4) {
+    // Plain commas here — joinCities' "and" would collide with "and N more".
+    say(`Here's what I've got. <strong>${escapeHtml(p.storeName.value)}</strong>, ${locs.length} locations in ${cities.length} cities — ${escapeHtml(cities.slice(0, 3).join(', '))} and ${cities.length - 3} more.`);
+  } else {
+    say(`Here's what I've got. <strong>${escapeHtml(p.storeName.value)}</strong>, ${locs.length} locations — ${escapeHtml(joinCities(cities))}.`);
+  }
+
+  /* --- licence status --- */
+  await typing(500);
+  if (st.overall === 'authorized') {
+    const lic = p.licenceNumber.value;
+    if (locs.length === 1) {
+      say(`Licence ${lic ? `<strong>${escapeHtml(lic)}</strong> ` : ''}is showing <strong>authorized to open</strong> with the AGCO.`);
+    } else {
+      const all = st.authorized === locs.length;
+      say(`${all ? `All ${st.authorized}` : `${st.authorized} of them`} are showing <strong>authorized to open</strong> with the AGCO${st.pending ? `, and ${st.pending} more still in progress` : ''}.`);
+    }
+  } else if (st.overall === 'pending') {
+    say('The AGCO has you as <strong>in progress</strong> rather than authorized yet. That\'s fine — we can set everything up now and flip you live the day your authorization lands.');
+  } else if (st.overall === 'cancelled') {
+    say('Heads up: the AGCO is showing that licence as <strong>cancelled</strong>. If you\'ve reapplied or moved under a new licence, correct it below and we\'ll carry on.');
+  }
+
+  /* --- hours, the conversational bit --- */
+  await typing(600);
+  if (p.hours?.prose) {
+    // We only looked up the anchor store, so don't claim it speaks for all 44.
+    say(locs.length === 1
+      ? `Google has you open <strong>${escapeHtml(p.hours.prose)}</strong>.`
+      : `Google has your ${escapeHtml(cities[0])} store open <strong>${escapeHtml(p.hours.prose)}</strong>. We'll pull the rest per location once you're in.`);
+  } else {
+    say('Google doesn\'t have hours listed for you, so we\'ll leave those blank — you can set them once you\'re in.');
+  }
+
+  /* --- contact --- */
+  const bits = [];
+  if (p.phone?.value) bits.push(`your phone as ${escapeHtml(p.phone.value)}`);
+  if (p.website?.value) bits.push(`your site as ${escapeHtml(p.website.value.replace(/^https?:\/\//, ''))}`);
+  if (bits.length) {
+    await typing(450);
+    let line = `It's got ${bits.join(' and ')}`;
+    if (p.rating?.value) line += `, sitting at ${p.rating.value} stars across ${p.rating.count} reviews`;
+    say(line + '.');
+  }
+
+  /* --- POS --- */
+  const verified = (p.stack || []).filter(s => s.source === 'verified');
+  const detected = (p.stack || []).filter(s => s.source === 'detected');
+  if (verified.length || detected.length) {
+    await typing(550);
+    if (verified.length) {
+      say(`You're on <strong>${escapeHtml(verified.map(v => v.label).join(' and '))}</strong> — we're already integrated with that, so stock and pricing sync from day one.`);
+    } else {
+      say(`Your site looks like it's running <strong>${escapeHtml(detected.slice(0, 2).map(d => d.label).join(' and '))}</strong>. We'll confirm that properly during setup.`);
+    }
+  } else {
+    await typing(500);
+    say('I couldn\'t tell what POS you\'re running from your site — we\'ll sort that out on the setup call.');
+  }
+
+  /* --- the editability promise --- */
+  await typing(500);
+  say('Everything above lives in your admin panel once you\'re in, so nothing here is permanent — change hours, addresses, contact details, any of it, any time.');
+
+  await typing(400);
+  say('Does it look right as a starting point?');
+
+  const choice = await control((el, done) => {
+    el.innerHTML = `
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" data-v="yes">Yes, that's us</button>
+        <button class="btn btn-ghost" type="button" data-v="fix">Something's off</button>
+      </div>`;
+    el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => done(b.dataset.v)));
+  });
+
+  if (choice === 'yes') { reply("Yes, that's us"); return; }
+
+  reply("Something's off");
+  await typing(450);
+  say('No problem. Fix what\'s wrong and leave the rest — and remember you can change all of this later anyway.');
+  await manualCorrections();
+}
+
+async function manualCorrections() {
+  const edits = await control((el, done) => {
+    const p = state.profile;
+    el.innerHTML = `
+      <div class="control-label">Corrections</div>
+      <div class="field" style="margin-bottom:10px">
+        <input type="text" id="eName" placeholder="Store name" value="${escapeHtml(p.storeName?.value || '')}" aria-label="Store name">
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <input type="text" id="eAddr" placeholder="Street address" value="${escapeHtml(p.address?.value || '')}" aria-label="Address">
+      </div>
+      <div class="field-row" style="margin-bottom:10px">
+        <div class="field"><input type="text" id="eLicence" placeholder="AGCO licence (CRSA…)" value="${escapeHtml(p.licenceNumber?.value || '')}" aria-label="Licence number"></div>
+        <div class="field"><input type="tel" id="ePhone" placeholder="Store phone" value="${escapeHtml(p.phone?.value || '')}" aria-label="Store phone"></div>
+      </div>
+      <div class="field">
+        <input type="url" id="eSite" placeholder="Website" value="${escapeHtml(p.website?.value || '')}" aria-label="Website">
+      </div>
+      <div class="btn-row"><button class="btn btn-primary" type="button">Save corrections</button></div>`;
+
+    el.querySelector('button').addEventListener('click', () => done({
+      storeName: el.querySelector('#eName').value.trim(),
+      address: el.querySelector('#eAddr').value.trim(),
+      licenceNumber: el.querySelector('#eLicence').value.trim(),
+      phone: el.querySelector('#ePhone').value.trim(),
+      website: el.querySelector('#eSite').value.trim()
+    }));
+  });
+
+  for (const [k, v] of Object.entries(edits)) {
+    if (v && v !== state.profile[k]?.value) state.profile[k] = { value: v, source: 'you', editable: true };
+  }
+  renderRecord();
+  reply('Updated');
+  await typing(400);
+  say('Got it — record updated.');
+}
+
+/* --- ACT 2: what's missing, and what it costs --- */
+
+/**
+ * The only place in the flow that sells. It runs straight after the readback,
+ * at peak goodwill, and it discloses the price here rather than at the card —
+ * a fee that first appears on the payment screen reads as a bait-and-switch
+ * even when it isn't one.
+ */
+async function valueBeat() {
+  const p = state.profile;
+  const locs = p?.locations || [];
+  const city = locs[0]?.name || 'your area';
+  const n = locs.length || 1;
+
+  await typing(650);
+  say(`So here's where you stand today.`);
+
+  await typing(600);
+  say(`Poof does around <strong>30,000 marketplace views a month</strong>. When someone in ${escapeHtml(city)} searches for what you carry, your store shows up — name and address, nothing else. They can't see your menu, can't check stock, can't order.`);
+
+  await typing(650);
+  say(`Turning on the <strong>Retail Ad Network</strong> connects your POS, so your live inventory and prices appear, and brand-funded campaigns start routing those shoppers to your checkout instead of someone else's.`);
+
+  await typing(500);
+  const monthly = n * 50;
+  say(`It's <strong>$50 per location, per month</strong>${n > 1 ? ` — $${monthly} for your ${n} stores` : ''}, plus HST. That covers what it costs us to build and hold open the connection to your POS — the integration itself, the stock and price sync, and the routing of every order into your system. No revenue share, and no cut of the orders we send you.`);
+
+  await control((el, done) => {
+    el.innerHTML = `
+      <div class="valueprops">
+        <div class="vp"><span class="vp-dot" style="background:var(--magenta)"></span><div><b>Brands pay for the traffic</b><span>Campaigns are funded by the brand. The $50 covers your POS connection.</span></div></div>
+        <div class="vp"><span class="vp-dot" style="background:var(--violet)"></span><div><b>Orders land in your POS</b><span>Fulfilled by your staff, on your licence, at your prices.</span></div></div>
+        <div class="vp"><span class="vp-dot" style="background:var(--verified-fill)"></span><div><b>Nothing charged until you're live</b><span>You'll speak to our team and approve before the first invoice.</span></div></div>
+        <div class="vp"><span class="vp-dot" style="background:var(--blue)"></span><div><b>Month to month</b><span>Cancel any time on 30 days' notice. No minimum term, no lock-in.</span></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" data-v="go">Sounds good — keep going</button>
+        <button class="btn btn-ghost" type="button" data-v="q">I have a question first</button>
+      </div>`;
+    el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => done(b.dataset.v)));
+  }).then(async v => {
+    if (v === 'go') { reply('Sounds good'); return; }
+    reply('I have a question first');
+    await typing(420);
+    say('Ask away — type it here and it goes straight to the person who\'ll be looking after your account. You can carry on either way, nothing is committed yet.');
+    const q = await askText('Your question', 'e.g. how long does the POS connection take?');
+    if (q) { state.question = q; reply(q); await typing(400); say('Got it — that\'ll be waiting for them. Let\'s carry on.'); }
+  });
+}
+
+/* --- step 3b: which location are we setting up --- */
+
+async function confirmLocation() {
+  const locs = state.profile?.locations || [];
+
+  if (locs.length <= 1) {
+    state.confirmedLocations = locs;
+  } else {
+    // If they searched by licence, address or postal code we already know which
+    // store they mean. Confirm that one rather than making them find it again.
+    const preselected = locs.filter(l => state.locationIds.includes(l.id));
+    let choice = 'pick';
+
+    if (preselected.length && preselected.length < locs.length) {
+      await typing(500);
+      const one = preselected.length === 1;
+      say(`That looks like your <strong>${escapeHtml(preselected.map(l => l.name).join(', '))}</strong> ${one ? 'store' : 'stores'}. Setting up ${one ? 'that one' : 'those'}, or all ${locs.length}?`);
+      choice = await control((el, done) => {
+        el.innerHTML = `
+          <div class="btn-row">
+            <button class="btn btn-primary" type="button" data-v="one">Just ${escapeHtml(preselected.map(l => l.name).join(', '))}</button>
+            <button class="btn btn-ghost" type="button" data-v="all">All ${locs.length}</button>
+            <button class="btn btn-ghost" type="button" data-v="pick">Let me choose</button>
+          </div>`;
+        el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => done(b.dataset.v)));
+      });
+      if (choice === 'one') { state.confirmedLocations = preselected; reply(preselected.map(l => l.name).join(', ')); }
+      else if (choice === 'all') { state.confirmedLocations = locs; reply(`All ${locs.length}`); }
+      else reply('Let me choose');
+    }
+
+    if (!state.confirmedLocations.length) {
+      await typing(500);
+      say(`Which of the ${locs.length} are we setting up? Most operators start with one and add the rest once they've seen it working.`);
+      const picked = await locationPicker(locs);
+      state.confirmedLocations = picked;
+      reply(picked.length === locs.length ? `All ${locs.length}` : picked.map(l => l.name).join(', '));
+    }
+  }
+
+  renderRecord();
+  await offerMoreLocations();
+}
+
+/** Multi-select over one banner's locations. */
+function locationPicker(locs) {
+  return control((el, done) => {
+    const shown = locs.slice(0, 40);
+    el.innerHTML = `
+      <div class="control-label">Locations</div>
+      <div class="options options-scroll">
+        ${shown.map((l, i) => `
+          <button class="option" type="button" aria-pressed="false" data-i="${i}">
+            <span class="option-mark" aria-hidden="true"></span>
+            <span><span class="option-title">${escapeHtml(l.name)}</span><span class="option-sub">${escapeHtml(l.address || '')}</span></span>
+          </button>`).join('')}
+      </div>
+      ${locs.length > shown.length ? `<p class="fineprint">Showing the first ${shown.length}. You can add the rest from your admin panel.</p>` : ''}
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" id="locGo" disabled>Continue</button>
+        <button class="btn btn-ghost" type="button" id="locAll">All ${locs.length}</button>
+      </div>`;
+    const go = el.querySelector('#locGo');
+    const chosen = new Set();
+    el.querySelectorAll('.option').forEach(b => b.addEventListener('click', () => {
+      const on = b.getAttribute('aria-pressed') === 'true';
+      b.setAttribute('aria-pressed', String(!on));
+      on ? chosen.delete(+b.dataset.i) : chosen.add(+b.dataset.i);
+      go.disabled = chosen.size === 0;
+    }));
+    go.addEventListener('click', () => done([...chosen].map(i => shown[i])));
+    el.querySelector('#locAll').addEventListener('click', () => done(locs));
+  });
+}
+
+/**
+ * Lets an operator add stores beyond the ones already chosen — including stores
+ * trading under a different name, which is common for independents who run two
+ * or three shops that were never branded as a chain.
+ */
+async function offerMoreLocations() {
+  while (true) {
+    const inBanner = (state.profile?.locations || [])
+      .filter(l => !state.confirmedLocations.some(c => c.id === l.id));
+
+    await typing(420);
+    const n = state.confirmedLocations.length;
+    say(`That's ${n} ${n === 1 ? 'store' : 'stores'} on the list. Anything else to add?`);
+
+    const choice = await control((el, done) => {
+      el.innerHTML = `
+        <div class="btn-row">
+          <button class="btn btn-primary" type="button" data-v="no">No, that's everything</button>
+          ${inBanner.length ? `<button class="btn btn-ghost" type="button" data-v="same">Add another ${escapeHtml(state.profile.storeName.value)}</button>` : ''}
+          <button class="btn btn-ghost" type="button" data-v="other">Add a store under a different name</button>
+        </div>`;
+      el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => done(b.dataset.v)));
+    });
+
+    if (choice === 'no') { reply("No, that's everything"); return; }
+
+    if (choice === 'same') {
+      reply('Add another location');
+      await typing(350);
+      say('Which ones?');
+      const more = await locationPicker(inBanner);
+      state.confirmedLocations = [...state.confirmedLocations, ...more];
+      renderRecord();
+      reply(more.map(l => l.name).join(', '));
+      continue;
+    }
+
+    reply('Add a store under a different name');
+    await typing(400);
+    say('What\'s it called? Name, address or CRSA number again.');
+
+    const picked = await storeSearchControl(
+      'Additional store',
+      'Store name, address, or CRSA number',
+      state.confirmedLocations.map(l => l.id)
+    );
+    reply(picked.name);
+
+    await typing(400);
+    const note = say('Looking that one up…');
+    try {
+      const qs = new URLSearchParams({ name: picked.name });
+      if (picked.bannerId) qs.set('bannerId', picked.bannerId);
+      const { profile } = await api(`/api/lookup?${qs}`);
+      const chosen = new Set(state.confirmedLocations.map(l => l.id));
+      const found = (profile.locations || []).filter(l => !chosen.has(l.id));
+      note.remove();
+
+      if (!found.length) {
+        await typing(300);
+        say((profile.locations || []).length
+          ? 'Looks like those are already on your list.'
+          : 'I couldn\'t find that one in the register. We\'ll add it manually on the setup call.');
+        continue;
+      }
+
+      let toAdd = found;
+      if (found.length > 1) {
+        await typing(350);
+        say(`<strong>${escapeHtml(profile.storeName.value)}</strong> has ${found.length} locations. Which of those?`);
+        toAdd = await locationPicker(found);
+      }
+
+      const existing = new Set(state.confirmedLocations.map(l => l.id));
+      const fresh = toAdd.filter(l => !existing.has(l.id));
+      state.confirmedLocations = [...state.confirmedLocations, ...fresh];
+      if (picked.bannerId && !state.bannerIds.includes(picked.bannerId)) {
+        state.bannerIds.push(picked.bannerId);
+      }
+      // Keep the master location list in step, so the picker and map see them.
+      for (const l of fresh) {
+        if (!state.profile.locations.some(x => x.id === l.id)) state.profile.locations.push(l);
+      }
+
+      // Merge any newly-verified POS into the record.
+      for (const s of (profile.stack || [])) {
+        if (!state.profile.stack.some(x => x.id === s.id)) state.profile.stack.push(s);
+      }
+      renderRecord();
+      reply(fresh.map(l => l.name).join(', ') || 'Already on the list');
+    } catch {
+      note.remove();
+      await typing(300);
+      say('That lookup didn\'t come back. We\'ll add it on the setup call.');
+    }
+  }
+}
+
+/* --- ACT 3: the stack, in one exchange --- */
+
+const POS_OPTIONS = [['cova', 'Cova'], ['greenline', 'Greenline'], ['other', 'Other']];
+const PAYMENT_OPTIONS = [
+  ['merrco', 'Merrco'], ['moneris', 'Moneris'],
+  ['blazepay', 'BlazePay'], ['covapay', 'CovaPay'], ['other', 'Other']
+];
+const ECOM_OPTIONS = [
+  ['buddi', 'Buddi'], ['dutchie', 'Dutchie'], ['breadstack', 'Breadstack'],
+  ['none', 'Just our POS menu'], ['other', 'Other']
+];
+
+const DELIVERY_OPTIONS = [
+  ['canfleet', 'Canfleet'],
+  ['onfleet', 'Onfleet'],
+  ['other', 'Something else'],
+  ['in_house', 'In-house (no software)']
+];
+
+const label = (list, id, other) => {
+  if (!id) return null;
+  if (id === 'other' && other) return other;
+  return (list.find(o => o[0] === id) || [])[1] || id;
+};
+const posLabel  = () => label(POS_OPTIONS, state.stack.pos, state.stack.posOther);
+const payLabel  = () => label(PAYMENT_OPTIONS, state.stack.payment, state.stack.paymentOther);
+const ecomLabel = () => label(ECOM_OPTIONS, state.stack.ecommerce, state.stack.ecommerceOther);
+const delLabel  = () => label(DELIVERY_OPTIONS, state.stack.deliverySoftware, state.stack.deliveryOther);
+
+/**
+ * POS, processor and e-commerce on one screen instead of three back-to-back
+ * questions. Same data, roughly half the perceived length — this is the stretch
+ * where the retailer gives the most and gets the least, so it should be short.
+ */
+async function askStack() {
+  await typing(600);
+  say('Now the practical bit — what are you running?');
+
+  const answers = await control((el, done) => {
+    const group = (id, label, opts) => `
+      <div class="stack-group">
+        <div class="control-label">${label}</div>
+        <div class="chipset" data-group="${id}">
+          ${opts.map(([v, l]) => `<button class="chipbtn" type="button" data-v="${v}">${l}</button>`).join('')}
+        </div>
+        <div class="field chip-other" id="other-${id}" hidden>
+          <input type="text" placeholder="Which one?" aria-label="${label} — other">
+        </div>
+      </div>`;
+
+    el.innerHTML = `
+      ${group('pos', 'Point of sale', POS_OPTIONS)}
+      ${group('pay', 'Payment processor', PAYMENT_OPTIONS)}
+      ${group('ecom', 'E-commerce', ECOM_OPTIONS)}
+      <div class="btn-row"><button class="btn btn-primary" type="button" id="stackGo" disabled>Continue</button></div>`;
+
+    const picked = {};
+    const go = el.querySelector('#stackGo');
+    const check = () => { go.disabled = !(picked.pos && picked.pay && picked.ecom); };
+
+    el.querySelectorAll('.chipset').forEach(set => {
+      set.addEventListener('click', e => {
+        const b = e.target.closest('.chipbtn');
+        if (!b) return;
+        set.querySelectorAll('.chipbtn').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        const id = set.dataset.group;
+        picked[id] = b.dataset.v;
+        const other = el.querySelector(`#other-${id}`);
+        other.hidden = b.dataset.v !== 'other';
+        if (!other.hidden) other.querySelector('input').focus();
+        check();
+      });
+    });
+
+    go.addEventListener('click', () => done({
+      pos: picked.pos,
+      posOther: el.querySelector('#other-pos input').value.trim() || null,
+      payment: picked.pay,
+      paymentOther: el.querySelector('#other-pay input').value.trim() || null,
+      ecommerce: picked.ecom,
+      ecommerceOther: el.querySelector('#other-ecom input').value.trim() || null
+    }));
+  });
+
+  Object.assign(state.stack, answers);
+  renderRecord();
+  reply([posLabel(), payLabel(), ecomLabel()].filter(Boolean).join(' · '));
+
+  const verified = (state.profile?.stack || []).filter(s => s.source === 'verified');
+  await typing(450);
+  if (verified.length && (state.stack.pos === 'greenline' || state.stack.pos === 'cova')) {
+    say(`Perfect — we're already integrated with ${escapeHtml(posLabel())}, so your stock and pricing sync from day one.`);
+  } else if (state.stack.pos === 'greenline' || state.stack.pos === 'cova') {
+    say(`Good — ${escapeHtml(posLabel())} is one we connect to directly. That part's straightforward.`);
+  } else {
+    say('Noted — we\'ll confirm what that connection looks like during setup.');
+  }
+}
+
+/* --- delivery --- */
+
+async function askDelivery() {
+  await typing(550);
+  say('Do you offer delivery?');
+
+  state.stack.delivers = await yesNo('Yes', 'No');
+  reply(state.stack.delivers ? 'Yes' : 'No');
+
+  if (!state.stack.delivers) {
+    await typing(430);
+    say('Would you like to?');
+    state.stack.wantsDelivery = await yesNo('Yes, we\'re interested', 'Not right now');
+    reply(state.stack.wantsDelivery ? "Yes, we're interested" : 'Not right now');
+
+    await typing(400);
+    say(state.stack.wantsDelivery
+      ? 'Noted — we\'ll flag your account. Delivery routing is on our roadmap and we\'ll come to you first when it\'s ready.'
+      : 'No problem — pickup orders route to you exactly the same way.');
+    renderRecord();
+    return;
+  }
+
+  await typing(500);
+  say('What do you use for your last-mile delivery software?');
+
+  const answer = await control((el, done) => {
+    el.innerHTML = `
+      <div class="chipset" id="delSet">
+        ${DELIVERY_OPTIONS.map(([v, l]) => `<button class="chipbtn" type="button" data-v="${v}">${l}</button>`).join('')}
+      </div>
+      <div id="delOther" hidden>
+        <div class="field" style="margin-top:12px">
+          <input type="text" id="delFree" placeholder="Which one? Or just describe it…" aria-label="Delivery software">
+        </div>
+        <div class="btn-row"><button class="btn btn-primary" type="button" id="delGo">Continue</button></div>
+      </div>`;
+
+    const other = el.querySelector('#delOther');
+    const input = el.querySelector('#delFree');
+
+    el.querySelector('#delSet').addEventListener('click', e => {
+      const b = e.target.closest('.chipbtn');
+      if (!b) return;
+      // "Something else" opens the box; every other chip answers immediately.
+      if (b.dataset.v === 'other') {
+        el.querySelectorAll('.chipbtn').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        other.hidden = false;
+        input.focus();
+        return;
+      }
+      done({ id: b.dataset.v, text: null });
+    });
+
+    const submit = () => {
+      const v = input.value.trim();
+      if (v) done({ id: matchDelivery(v), text: v });
+    };
+    el.querySelector('#delGo').addEventListener('click', submit);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+  });
+
+  state.stack.deliverySoftware = answer.id;
+  if (answer.id === 'other') state.stack.deliveryOther = answer.text;
+  reply(answer.text || delLabel());
+  renderRecord();
+
+  await typing(420);
+  if (answer.id === 'canfleet' || answer.id === 'onfleet') {
+    say(`We work with ${escapeHtml(delLabel())} directly — we'll arrange access with them during setup.`);
+  } else if (answer.id === 'in_house') {
+    say('Noted. Delivery orders will land in your POS for your own drivers.');
+  } else {
+    say('Noted — we\'ll look at whether we can connect to that during setup.');
+  }
+}
+
+/** Light matching so free text still lands on a known vendor. */
+function matchDelivery(text) {
+  const s = text.toLowerCase();
+  if (/can\s*fleet/.test(s)) return 'canfleet';
+  if (/on\s*fleet/.test(s)) return 'onfleet';
+  if (/in[- ]?house|our own|ourselves|own driver|no software|manual/.test(s)) return 'in_house';
+  return 'other';
+}
+
+/* --- small reusable controls --- */
+
+function pickOne(labelText, options) {
+  return control((el, done) => {
+    el.innerHTML = `
+      <div class="control-label">${labelText}</div>
+      <div class="options">
+        ${options.map(([id, lab]) => `
+          <button class="option option-inline" type="button" data-id="${id}">
+            <span class="option-title">${lab}</span>
+          </button>`).join('')}
+      </div>`;
+    el.querySelectorAll('.option').forEach(b =>
+      b.addEventListener('click', () => done(b.dataset.id)));
+  });
+}
+
+function yesNo(yesLabel = 'Yes', noLabel = 'No') {
+  return control((el, done) => {
+    el.innerHTML = `
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" data-v="1">${yesLabel}</button>
+        <button class="btn btn-ghost" type="button" data-v="">${noLabel}</button>
+      </div>`;
+    el.querySelectorAll('button').forEach(b =>
+      b.addEventListener('click', () => done(!!b.dataset.v)));
+  });
+}
+
+function askText(labelText, placeholder) {
+  return control((el, done) => {
+    el.innerHTML = `
+      <div class="control-label">${labelText}</div>
+      <div class="field"><input type="text" id="txt" placeholder="${placeholder}" aria-label="${labelText}"></div>
+      <div class="btn-row"><button class="btn btn-primary" type="button">Continue</button></div>`;
+    const input = el.querySelector('#txt');
+    input.focus();
+    const submit = () => done(input.value.trim() || null);
+    el.querySelector('button').addEventListener('click', submit);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+  });
+}
+
+/* --- step 5: referral --- */
+
+async function askReferral() {
+  await typing(550);
+  say('Last thing before setup — did a brand refer you? If so their code gets you <strong>three months on us</strong>.');
+
+  const has = await control((el, done) => {
+    el.innerHTML = `
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" data-v="yes">I have a code</button>
+        <button class="btn btn-ghost" type="button" data-v="no">No code</button>
+      </div>`;
+    el.querySelectorAll('button').forEach(b =>
+      b.addEventListener('click', () => done(b.dataset.v === 'yes')));
+  });
+
+  if (!has) {
+    reply('No code');
+    await typing(450);
+    say('No problem — most stores come to us directly rather than through a brand.');
+    await wait(240);
+    say('And nothing\'s charged until you\'re live, so there\'s no clock running on your side either way.');
+    await wait(240);
+    say('If a brand you stock does have a code, mention it to your account manager on the call — we can still apply it. The three months start at go-live, not today.');
+    return;
+  }
+  reply('I have a code');
+
+  await typing(350);
+  say('Go ahead.');
+
+  state.referralCode = await control((el, done) => {
+    el.innerHTML = `
+      <div class="control-label">Brand referral code</div>
+      <div class="field"><input type="text" id="refInput" placeholder="e.g. BUZZD" style="text-transform:uppercase;font-family:var(--mono)" aria-label="Referral code"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" id="refGo">Apply code</button>
+        <button class="btn btn-ghost" type="button" id="refSkip">Skip</button>
+      </div>`;
+    const input = el.querySelector('#refInput');
+    input.focus();
+    el.querySelector('#refGo').addEventListener('click', () => done(input.value.trim().toUpperCase() || null));
+    el.querySelector('#refSkip').addEventListener('click', () => done(null));
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') done(input.value.trim().toUpperCase() || null); });
+  });
+
+  if (state.referralCode) {
+    reply(state.referralCode);
+    renderRecord();
+  }
+}
+
+/* --- step 6: contact --- */
+
+async function askContact() {
+  await typing(600);
+  say('Who should we set up as the account owner?');
+
+  const contact = await control((el, done) => {
+    el.innerHTML = `
+      <div class="control-label">Account owner</div>
+      <div class="field" style="margin-bottom:10px">
+        <input type="text" id="cName" placeholder="Full name" autocomplete="name" aria-label="Full name">
+      </div>
+      <div class="field-row">
+        <div class="field"><input type="email" id="cEmail" placeholder="Work email" autocomplete="email" aria-label="Work email"></div>
+        <div class="field"><input type="tel" id="cPhone" placeholder="Mobile (optional)" autocomplete="tel" aria-label="Mobile"></div>
+      </div>
+      <div id="cErr"></div>
+      <div class="btn-row"><button class="btn btn-primary" type="button" id="cGo">Continue</button></div>`;
+
+    const err = el.querySelector('#cErr');
+    el.querySelector('#cName').focus();
+
+    el.querySelector('#cGo').addEventListener('click', () => {
+      const name = el.querySelector('#cName').value.trim();
+      const email = el.querySelector('#cEmail').value.trim();
+      const phone = el.querySelector('#cPhone').value.trim();
+      if (!name) { err.innerHTML = '<div class="error">Add a name so we know who to reach.</div>'; return; }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.innerHTML = '<div class="error">That email doesn\'t look right. Check the spelling.</div>'; return; }
+      done({ name, email, phone });
+    });
+  });
+
+  state.contact = contact;
+  reply(`${contact.name} · ${contact.email}`);
+}
+
+/* --- terms acceptance --- */
+
+const TERMS_URL = 'https://business.poof.ca/terms.html';
+
+const TERMS_VERSION = '2026-08-15';
+
+/**
+ * Click-wrap acceptance. Schedule A is drafted to be accepted "by clicking a box
+ * indicating acceptance", so this is the execution step — which is why it
+ * captures who accepted, their title, and an explicit authority affirmation
+ * rather than a bare checkbox.
+ */
+async function acceptTerms() {
+  const locs = state.confirmedLocations?.length ? state.confirmedLocations : (state.profile.locations || []);
+  const n = locs.length || 1;
+
+  await typing(650);
+  say(`Before the card — the paperwork, in one step.`);
+  await wait(240);
+  say(`Accepting here covers all <strong>${n} ${n === 1 ? 'location' : 'locations'}</strong> you've added, and lets us contact ${escapeHtml(partnerList())} to set up your connection.`);
+  await wait(240);
+  say(`<strong>Nothing happens straight away.</strong> Your account manager will call you first to walk through exactly what to expect — and we won't contact ${escapeHtml(partnerList())} until after that call, with you copied on every message.`);
+  await wait(230);
+  say(`And it's <strong>month to month</strong> — you can cancel any time on 30 days' notice. No minimum term, no lock-in.`);
+
+  const accepted = await control((el, done) => {
+    el.innerHTML = `
+      <div class="terms">
+        <div class="reassure">
+          <div class="rz rz-lead"><span class="rz-tick">✓</span><span><b>Cancel any time, on 30 days' notice.</b> Month to month — no minimum term, no lock-in, no cancellation fee.</span></div>
+          <div class="rz"><span class="rz-tick">✓</span><span><b>No charge today.</b> Billing starts only once you're live and you've approved it.</span></div>
+          <div class="rz"><span class="rz-tick">✓</span><span><b>A call before anything moves.</b> Your account manager walks you through it before we contact anyone.</span></div>
+          <div class="rz"><span class="rz-tick">✓</span><span><b>You stay in the loop.</b> You're copied on every message we send your POS and payment providers.</span></div>
+        </div>
+
+        <label class="tickrow">
+          <input type="checkbox" id="tickTerms">
+          <span class="tickbox"></span>
+          <span class="ticktext">
+            I have read and agree to the
+            <a href="${TERMS_URL}" target="_blank" rel="noopener">Poof Dispensary Agreement, Terms and Conditions, and Payments Policy</a>,
+            on behalf of <strong>${escapeHtml(state.profile.storeName.value)}</strong> and each of the
+            ${n} ${n === 1 ? 'location' : 'locations'} listed above.
+          </span>
+        </label>
+
+        <label class="tickrow">
+          <input type="checkbox" id="tickAuth">
+          <span class="tickbox"></span>
+          <span class="ticktext">
+            I am authorised to enter into this agreement on behalf of the business, and I authorise
+            Poof to contact our POS, payment and delivery providers to set up the integration.
+          </span>
+        </label>
+
+        <div class="field-row" style="margin-top:14px">
+          <div class="field"><input type="text" id="signName" placeholder="Your full name" autocomplete="name" aria-label="Full name"></div>
+          <div class="field"><input type="text" id="signTitle" placeholder="Your title (e.g. Owner)" aria-label="Title"></div>
+        </div>
+        <div id="termsErr"></div>
+        <div class="btn-row"><button class="btn btn-primary" type="button" id="termsGo">Agree and continue</button></div>
+      </div>`;
+
+    const err = el.querySelector('#termsErr');
+    el.querySelector('#termsGo').addEventListener('click', () => {
+      const t1 = el.querySelector('#tickTerms').checked;
+      const t2 = el.querySelector('#tickAuth').checked;
+      const name = el.querySelector('#signName').value.trim();
+      const title = el.querySelector('#signTitle').value.trim();
+      if (!t1 || !t2) { err.innerHTML = '<div class="error">Both boxes need ticking before we can continue.</div>'; return; }
+      if (!name || !title) { err.innerHTML = '<div class="error">Add your name and title — they go on the order form.</div>'; return; }
+      done({ name, title });
+    });
+  });
+
+  // The evidentiary record. Server adds IP, user agent and a hash of the terms text.
+  state.acceptance = {
+    acceptedBy: accepted.name,
+    acceptedTitle: accepted.title,
+    acceptedEmail: state.contact.email,
+    acceptedAt: new Date().toISOString(),
+    termsVersion: TERMS_VERSION,
+    termsUrl: TERMS_URL,
+    locationIds: locs.map(l => l.id),
+    locationCount: locs.length,
+    authorityAffirmed: true
+  };
+
+  reply(`${accepted.name}, ${accepted.title}`);
+  await typing(420);
+  say('Recorded — that\'s your signature on the order form, and we\'ll email you a copy with all your locations listed.');
+  await wait(230);
+  say('Your account manager will be in touch within one business day to go through it with you before anything else happens.');
+}
+
+/** The partners we'll need to contact, in their own words. */
+function partnerList() {
+  const names = [posLabel(), payLabel()];
+  if (state.stack.ecommerce && state.stack.ecommerce !== 'none') names.push(ecomLabel());
+  if (state.stack.delivers && state.stack.deliverySoftware !== 'in_house') names.push(delLabel());
+  const clean = [...new Set(names.filter(Boolean))];
+  return clean.length > 1
+    ? clean.slice(0, -1).join(', ') + ' and ' + clean[clean.length - 1]
+    : clean[0] || 'your providers';
+}
+
+/* --- step 8: summary --- */
+
+async function showSummary() {
+  await typing(700);
+  say('Excellent — here\'s a summary of what we have for your store.');
+
+  const p = state.profile;
+  const locs = state.confirmedLocations?.length ? state.confirmedLocations : (p.locations || []);
+
+  const lines = [
+    ['Store', p.storeName?.value],
+    ['Locations', locs.length === 1
+      ? locs[0].address
+      : `${locs.length} locations — ${[...new Set(locs.map(l => l.name))].slice(0, 4).join(', ')}${locs.length > 4 ? '…' : ''}`],
+    ['AGCO licence', locs.length === 1 ? p.licenceNumber?.value : `${locs.length} licences on file`],
+    ['Hours', p.hours?.prose],
+    ['Point of sale', posLabel()],
+    ['Payment processor', payLabel()],
+    ['E-commerce', ecomLabel()],
+    ['Delivery', state.stack.delivers
+      ? `Yes — ${delLabel() || 'software to confirm'}`
+      : state.stack.wantsDelivery ? 'Not yet — interested in offering it' : 'No'],
+    ['Retail Ad Network', `${locs.length} × $50.00 = $${(locs.length * 50).toFixed(2)}/mo + HST`],
+    ['Account owner', [state.contact.name, state.contact.email].filter(Boolean).join(' · ')],
+    ['Referral', state.referralCode ? `${state.referralCode} — 3 months credit` : null]
+  ].filter(([, v]) => v);
+
+  await control((el, done) => {
+    el.innerHTML = `
+      <div class="summary">
+        ${lines.map(([k, v]) => `
+          <div class="summary-row">
+            <div class="summary-key">${escapeHtml(k)}</div>
+            <div class="summary-val">${escapeHtml(String(v))}</div>
+          </div>`).join('')}
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" data-v="ok">Looks right</button>
+        <button class="btn btn-ghost" type="button" data-v="fix">Change something</button>
+      </div>`;
+    el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => done(b.dataset.v)));
+  }).then(async v => {
+    if (v === 'ok') { reply('Looks right'); return; }
+    reply('Change something');
+    await typing(400);
+    say('No problem — tell us what to change and we\'ll fix it on the setup call. Nothing here is locked in, and it\'s all editable in your admin panel once you\'re in.');
+    await askText('What should we change?', 'e.g. our Sarnia hours are wrong')
+      .then(note => { if (note) { state.note = note; reply(note); } });
+    await typing(400);
+    say('Got it, we\'ll pick that up with you.');
+  });
+}
+
+/* --- step 7: payment --- */
+
+async function toPayment() {
+  await typing(700);
+  say('Last step — the card we\'ll have on file for when you go live.');
+  await wait(260);
+  say('Adding it now means that once you\'ve approved everything, we can launch the same day instead of stopping to chase payment details. It also tells us you\'re serious, so your setup goes to the front of the queue.');
+  await wait(260);
+  say('<strong>Nothing is charged today.</strong> You\'ll speak with our team, see your menu configured, and approve it — all before the first invoice. It stays <strong>month to month</strong>, cancel any time on 30 days\' notice. You\'d be joining <strong>80+ Ontario retailers</strong> already on the network.');
+
+  await control((el, done) => {
+    el.innerHTML = `
+      <div class="btn-row">
+        <button class="btn btn-primary btn-lg" type="button" id="payGo">Add card securely</button>
+      </div>
+      <div id="payErr"></div>
+      <p class="fineprint">Card details are entered on Stripe\'s own page — Poof never sees or stores your card number. We store the card now and charge it only once you\'re live.</p>`;
+
+    const go = el.querySelector('#payGo');
+    const err = el.querySelector('#payErr');
+
+    go.addEventListener('click', async () => {
+      go.disabled = true;
+      go.textContent = 'Opening Stripe…';
+      err.innerHTML = '';
+      try {
+        const data = await api('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            profile: state.profile,
+            confirmedLocations: state.confirmedLocations,
+            goals: state.goals,
+            contact: state.contact,
+            stack: state.stack,
+            acceptance: state.acceptance,
+            referralCode: state.referralCode
+          })
+        });
+        if (data.mode === 'embedded' && data.clientSecret) {
+          done(true);
+          await mountStripe(data);
+          return;
+        }
+        if (data.url) { location.href = data.url; return; }   // hosted fallback
+        done(true);
+      } catch (e) {
+        err.innerHTML = `<div class="error">${escapeHtml(e.message)}</div>`;
+        go.disabled = false;
+        go.textContent = 'Add card securely';
+      }
+    });
+  });
+}
+
+
+/**
+ * Embedded Stripe Checkout — the card form mounts inside the thread rather
+ * than redirecting away from it. Stripe renders in its own iframe, so card
+ * data never touches this page or our servers.
+ */
+async function mountStripe(session) {
+  const q = session.quote || {};
+  const sub = (q.subtotal || 0) / 100;
+  const hst = sub * 0.13;
+  const total = sub + hst;
+
+  await typing(450);
+  say('Opening the secure card form.');
+
+  const host = document.createElement('div');
+  host.className = 'controls';
+  host.innerHTML = `
+    <div class="quote">
+      <div class="qline"><span>$50.00 × ${q.locations || 1} location${(q.locations || 1) === 1 ? '' : 's'}</span><span>$${sub.toFixed(2)}</span></div>
+      <div class="qline"><span>HST (13%)</span><span>$${hst.toFixed(2)}</span></div>
+      ${q.rebateMonths ? `<div class="qline qline-credit"><span>Referral — first ${q.rebateMonths} months</span><span>−$${total.toFixed(2)}</span></div>` : ''}
+      <div class="qline qline-total"><span>Due today</span><span>$0.00</span></div>
+      <div class="qline qline-note">
+        <span>${q.rebateMonths ? `From month ${q.rebateMonths + 1}, once live` : 'Monthly, once live'}</span>
+        <span>$${total.toFixed(2)}</span>
+      </div>
+    </div>
+    <div id="stripeMount" class="stripe-mount"></div>
+    <p class="fineprint">Card details are entered directly with Stripe. Poof never sees or stores your card number. You won't be charged until you speak with a Poof representative and confirm your interest.</p>`;
+  thread.appendChild(host);
+  scrollDown();
+
+  try {
+    const stripe = Stripe(session.publishableKey);
+    const checkout = await stripe.initEmbeddedCheckout({ clientSecret: session.clientSecret });
+    checkout.mount('#stripeMount');
+  } catch (err) {
+    console.error('[stripe]', err);
+    host.querySelector('#stripeMount').innerHTML =
+      '<div class="error">The card form didn\'t load. Refresh and try again, or we can send you a secure link instead.</div>';
+  }
+}
+
+/* ── coverage map ─────────────────────────────────────────────────
+   Every authorized store in Ontario, with the retailer's own doors lit
+   as coverage cells. Read-only and animated — the point is to show what
+   their listing becomes, not to let them edit it.
+   ──────────────────────────────────────────────────────────────── */
+
+/** Catchment radius per store, in km. */
+const CELL_KM = 5;
+
+async function showCoverageMap() {
+  const overlay = document.createElement('div');
+  overlay.className = 'mapwrap';
+  const storeName = state.profile?.storeName?.value || 'Your store';
+  const n = state.confirmedLocations.length || 1;
+
+  overlay.innerHTML = `
+    <div class="mapcard" role="dialog" aria-label="Your coverage on the marketplace">
+      <button class="mapclose" type="button" aria-label="Close">✕</button>
+      <div class="maphead">
+        <h2>Your coverage on the marketplace</h2>
+        <p>Brands buy advertising against the areas where demand is densest. Each of your
+           stores becomes a coverage cell — a catchment Poof can route orders into. The more
+           ground you cover, the more of a brand's campaign lands with you.</p>
+      </div>
+
+      <div class="covbar">
+        <div class="covstat" id="covStat">
+          <b id="covKm">—</b>
+          <span id="covLabel">Turn coverage on to see your reach</span>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="covToggle" checked>
+          <span class="tk"><i></i></span>
+          <span class="tl">Poof coverage on</span>
+        </label>
+      </div>
+
+      <div class="mapstage"><div id="leaf"></div><div class="maploading" id="mapLoad">Locating your ${n === 1 ? 'store' : 'stores'}…</div></div>
+
+      <div class="mapfoot">
+        <span class="lg"><i class="lg-you"></i> ${escapeHtml(storeName)}</span>
+        <span class="lg"><i class="lg-cell"></i> Coverage cell · ${CELL_KM} km catchment</span>
+        <span class="lg-note" id="precNote"></span>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('in'));
+
+  const close = () => { overlay.classList.remove('in'); setTimeout(() => overlay.remove(), 260); };
+  overlay.querySelector('.mapclose').addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+  });
+
+  try {
+    const ids = state.confirmedLocations.map(l => l.id);
+    let locs;
+    try {
+      const r = await api('/api/geocode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+      });
+      locs = r.locations;
+    } catch {
+      locs = state.confirmedLocations.map(l => ({ ...l, precision: 'city' }));
+    }
+    overlay.querySelector('#mapLoad').remove();
+    renderLeaflet(overlay, locs, storeName);
+  } catch (err) {
+    console.error('[map]', err);
+    overlay.querySelector('#mapLoad').textContent = 'Map unavailable right now.';
+  }
+}
+
+function renderLeaflet(overlay, locs, storeName) {
+  const pts = locs.filter(l => l.lat && l.lng);
+  if (!pts.length) {
+    overlay.querySelector('.mapstage').innerHTML =
+      '<div class="maploading">We couldn\'t place your stores on the map yet.</div>';
+    return;
+  }
+
+  const map = L.map(overlay.querySelector('#leaf'), {
+    zoomControl: false,
+    scrollWheelZoom: true,
+    attributionControl: true
+  });
+
+  // Light basemap, to match the rest of the flow.
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO',
+    maxZoom: 19
+  }).addTo(map);
+
+  L.control.zoom({ position: 'topright' }).addTo(map);
+
+  const cells = L.layerGroup();
+  const markers = L.layerGroup().addTo(map);
+
+  for (const p of pts) {
+    L.circle([p.lat, p.lng], {
+      radius: CELL_KM * 1000,
+      className: 'cell',
+      color: '#FF428A', weight: 1.6, opacity: .9,
+      fillColor: '#FF428A', fillOpacity: .13,
+      dashArray: '5 5'
+    }).addTo(cells);
+
+    L.circleMarker([p.lat, p.lng], {
+      radius: 7, color: '#FFFFFF', weight: 2.5,
+      fillColor: '#FF428A', fillOpacity: 1
+    })
+      .bindTooltip(
+        `<b>${escapeHtml(storeName)}</b><br>${escapeHtml(p.address || p.name || '')}`,
+        { direction: 'top', offset: [0, -8] }
+      )
+      .addTo(markers);
+  }
+
+  cells.addTo(map);
+
+  const bounds = L.latLngBounds(pts.map(p => [p.lat, p.lng]));
+  map.fitBounds(bounds.pad(pts.length === 1 ? 0.9 : 0.35), { maxZoom: 13 });
+  setTimeout(() => map.invalidateSize(), 60);
+
+  /* ---- coverage toggle ---- */
+  const toggle = overlay.querySelector('#covToggle');
+  const kmEl = overlay.querySelector('#covKm');
+  const labelEl = overlay.querySelector('#covLabel');
+  const areaKm2 = unionAreaKm2(pts, CELL_KM);
+  const cities = new Set(pts.map(p => p.name)).size;
+
+  const paint = on => {
+    if (on) {
+      cells.addTo(map);
+      kmEl.textContent = `${Math.round(areaKm2).toLocaleString()} km²`;
+      labelEl.textContent = `covered by your ${pts.length} ${pts.length === 1 ? 'store' : 'stores'}`
+        + (cities > 1 ? ` across ${cities} cities` : '');
+      overlay.querySelector('.covbar').classList.add('on');
+    } else {
+      map.removeLayer(cells);
+      kmEl.textContent = '0 km²';
+      labelEl.textContent = 'Coverage off — your store is just a pin on the map';
+      overlay.querySelector('.covbar').classList.remove('on');
+    }
+  };
+  toggle.addEventListener('change', () => paint(toggle.checked));
+  paint(true);
+
+  const approx = pts.filter(p => p.precision !== 'exact').length;
+  overlay.querySelector('#precNote').textContent = approx
+    ? `${approx} of ${pts.length} pinned at city level`
+    : 'Pinned to your street address';
+}
+
+/**
+ * Area of the union of the coverage circles, in km².
+ *
+ * Summing πr² would double-count where stores overlap — exactly what happens
+ * with a chain clustered in one city, which is where the number matters most.
+ * Monte Carlo over the bounding box is accurate to about a percent and takes
+ * no dependencies.
+ */
+function unionAreaKm2(pts, radiusKm) {
+  if (!pts.length) return 0;
+  const KM_PER_DEG_LAT = 110.574;
+  const kmPerDegLng = lat => 111.320 * Math.cos(lat * Math.PI / 180);
+
+  const dLat = radiusKm / KM_PER_DEG_LAT;
+  const midLat = pts.reduce((s, p) => s + p.lat, 0) / pts.length;
+  const dLng = radiusKm / kmPerDegLng(midLat);
+
+  const minLat = Math.min(...pts.map(p => p.lat)) - dLat;
+  const maxLat = Math.max(...pts.map(p => p.lat)) + dLat;
+  const minLng = Math.min(...pts.map(p => p.lng)) - dLng;
+  const maxLng = Math.max(...pts.map(p => p.lng)) + dLng;
+
+  const boxKm2 = (maxLat - minLat) * KM_PER_DEG_LAT
+               * (maxLng - minLng) * kmPerDegLng(midLat);
+
+  const N = 40000;
+  let hits = 0;
+  for (let i = 0; i < N; i++) {
+    const la = minLat + Math.random() * (maxLat - minLat);
+    const ln = minLng + Math.random() * (maxLng - minLng);
+    for (const p of pts) {
+      const dy = (la - p.lat) * KM_PER_DEG_LAT;
+      const dx = (ln - p.lng) * kmPerDegLng(p.lat);
+      if (dx * dx + dy * dy <= radiusKm * radiusKm) { hits++; break; }
+    }
+  }
+  return boxKm2 * (hits / N);
+}
+
+/* --- terminal states --- */
+
+async function finished() {
+  if (thread.children.length) await typing(700);
+  renderProgress('payment');
+
+  say('You\'re in.', { lead: true });
+  await wait(300);
+  say('Welcome to the Poof family. Your card is saved and <strong>nothing has been charged</strong>.');
+  await wait(300);
+  say('Here\'s exactly what happens from here — the first one\'s already done.');
+
+  const steps = [
+    ['Signed up', 'Agreement accepted — your order form is on its way to your inbox.', 'done'],
+    ['Baz will reach out', 'Within one business day, to help you get set up and walk you through what to expect.', 'next'],
+    ['We connect your systems', 'We contact your integration partners, with you copied on every message.', ''],
+    ['Your admin panel', 'Login sent, menu configured, ready for your approval.', ''],
+    ['Go live', 'You approve, we launch, and the first invoice starts.', '']
+  ];
+
+  const el = document.createElement('div');
+  el.className = 'controls';
+  el.innerHTML = `
+    <div class="timeline">
+      ${steps.map(([title, sub, cls]) => `
+        <div class="tl ${cls}">
+          <span class="tl-node"></span>
+          <div><b>${escapeHtml(title)}</b><span>${escapeHtml(sub)}</span></div>
+        </div>`).join('')}
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary btn-lg" type="button" id="previewMap">Preview my store on the marketplace</button>
+      <a class="btn btn-ghost btn-lg" href="https://business.poof.ca" style="text-decoration:none">Open business.poof.ca</a>
+    </div>`;
+  thread.appendChild(el);
+  el.querySelector('#previewMap').addEventListener('click', showCoverageMap);
+  scrollDown();
+
+  await wait(400);
+  say('Anything looks wrong in the meantime, just reply to the email — it goes straight to your account rep.');
+}
+
+async function cancelled() {
+  say('No problem — nothing was charged.', { lead: true });
+  await wait(250);
+  say('Your details are saved for 24 hours. Pick up where you left off whenever you\'re ready.');
+  await control((el, done) => {
+    el.innerHTML = '<div class="btn-row"><button class="btn btn-primary" type="button">Start again</button></div>';
+    el.querySelector('button').addEventListener('click', () => { location.href = '/'; });
+  });
+}
+
+run();
+</script>
+</body>
+</html>

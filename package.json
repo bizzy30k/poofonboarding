@@ -1,0 +1,20 @@
+{
+  "name": "poof-retailer-onboarding",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Conversational onboarding for retailers joining the Poof Retail Network.",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "stripe": "^16.12.0"
+  },
+  "scripts": {
+    "build:index": "node scripts/build-index.mjs",
+    "build:tracker": "python3 scripts/build-tracker.py",
+    "dev": "npm run build:index && vercel dev",
+    "deploy": "npm run build:index && vercel --prod"
+  }
+}

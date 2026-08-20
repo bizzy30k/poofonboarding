@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retailer Terms | Poof</title>
+<meta name="description" content="The Poof Dispensary Agreement, Terms and Conditions, and Policies for Ontario cannabis retailers on the Poof Retail Network.">
+<link rel="canonical" href="https://business.poof.ca/terms.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F6F8; --card:#FFFFFF; --nav:#FEFEFE; --line:#E8E8EE;
+  --pink:#FF428A; --pink-text:#C4126A; --violet:#B77EFC; --blue:#489CFC;
+  --ink:#0F0F12; --body:#3A3A44; --caption:#74747C;
+  --font:'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--body);font-family:var(--font);line-height:1.65;
+     -webkit-font-smoothing:antialiased}
+a{color:var(--pink-text)}
+
+.nav{background:var(--nav);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.nav-in{display:flex;align-items:center;justify-content:space-between;gap:20px;
+        max-width:1180px;margin:0 auto;padding:16px 28px}
+.wordmark{font-size:24px;font-weight:700;letter-spacing:-.03em;text-decoration:none;color:var(--ink)}
+.wordmark span{color:var(--pink)}
+.nav-links{display:flex;gap:28px;font-size:15px}
+.nav-links a{color:var(--body);text-decoration:none}
+.nav-links a:hover{color:var(--ink)}
+@media (max-width:820px){.nav-links{display:none}}
+
+.hero{background:linear-gradient(100deg,#F7E2EC 0%,#F7E8F0 42%,#F2EDF5 68%,#EDE8F9 100%);
+      padding:52px 28px 44px;border-bottom:1px solid var(--line)}
+.hero-in{max-width:1180px;margin:0 auto}
+.eyebrow{font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--pink-text);font-weight:600}
+.hero h1{font-size:clamp(30px,4.4vw,44px);line-height:1.1;letter-spacing:-.032em;margin:14px 0 12px;
+         font-weight:700;color:var(--ink)}
+.hero p{margin:0;max-width:640px;font-size:17px;color:var(--body)}
+.stamp{display:inline-flex;align-items:center;gap:10px;margin-top:20px;background:rgba(255,255,255,.8);
+       border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:13.5px;color:var(--body)}
+.stamp b{color:var(--ink)}
+
+.shell{max-width:1180px;margin:0 auto;padding:36px 28px 80px;display:grid;
+       grid-template-columns:260px minmax(0,1fr);gap:44px;align-items:start}
+@media (max-width:960px){.shell{grid-template-columns:1fr;gap:24px}}
+
+.toc{position:sticky;top:82px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+@media (max-width:960px){.toc{position:static}}
+.toc h2{margin:0 0 12px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--caption);font-weight:600}
+.toc a{display:block;padding:7px 0;font-size:14.5px;color:var(--body);text-decoration:none;border-bottom:1px solid var(--line)}
+.toc a:last-of-type{border-bottom:none}
+.toc a:hover{color:var(--pink-text)}
+.toc .dl{display:block;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);
+         font-size:13px;color:var(--caption);text-decoration:none}
+
+.doc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:34px 38px;margin-bottom:24px}
+@media (max-width:600px){.doc{padding:24px 20px}}
+.doc-head{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:22px}
+.doc-head .tag{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:var(--violet)}
+.doc-head h2{margin:8px 0 0;font-size:25px;letter-spacing:-.025em;color:var(--ink);font-weight:700}
+.doc-head p{margin:8px 0 0;font-size:14.5px;color:var(--caption)}
+
+.doc p{margin:0 0 13px;font-size:15px}
+.doc strong{color:var(--ink)}
+.doc h1,.doc h2,.doc h3,.doc h4{color:var(--ink);letter-spacing:-.015em;margin:26px 0 10px;line-height:1.3}
+.doc h1{font-size:21px} .doc h2{font-size:19px} .doc h3{font-size:17px} .doc h4{font-size:15.5px}
+.doc ul,.doc ol{margin:0 0 14px;padding-left:22px;font-size:15px}
+.doc li{margin-bottom:7px}
+.doc table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+.doc th,.doc td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+.doc th{background:var(--bg);color:var(--ink);font-weight:600}
+.doc hr{border:none;border-top:1px solid var(--line);margin:24px 0}
+
+.callout{background:var(--bg);border:1px solid var(--line);border-left:3px solid var(--pink);
+         border-radius:10px;padding:16px 18px;margin:0 0 24px;font-size:14.5px}
+.callout b{color:var(--ink)}
+
+.foot{border-top:1px solid var(--line);background:var(--nav);padding:26px 28px}
+.foot-in{max-width:1180px;margin:0 auto;display:flex;justify-content:space-between;gap:16px;
+         flex-wrap:wrap;font-size:13px;color:var(--caption)}
+
+@media print{
+  .nav,.toc,.hero{display:none}
+  .shell{display:block;padding:0}
+  .doc{border:none;padding:0;margin-bottom:28px;page-break-after:always}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a class="wordmark" href="https://business.poof.ca/">poof<span>.</span></a>
+    <div class="nav-links">
+      <a href="https://business.poof.ca/retailers.html">For Retailers</a>
+      <a href="https://business.poof.ca/brands.html">For Brands</a>
+      <a href="https://business.poof.ca/integrations.html">Integrations</a>
+      <a href="https://business.poof.ca/get-started.html">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-in">
+    <div class="eyebrow">Poof Retail Network</div>
+    <h1>Retailer terms</h1>
+    <p>These are the terms that apply when a cannabis retailer joins the Poof Retail Network.
+       Together they form the agreement you accept during registration.</p>
+    <div class="stamp">Version <b>2026-08-15</b> &nbsp;·&nbsp; Effective <b>15 August 2026</b></div>
+  </div>
+</header>
+
+<main class="shell">
+  <aside class="toc">
+    <h2>On this page</h2>
+    <a href="#agreement">Dispensary Agreement</a>
+    <a href="#schedule-a">Schedule A — Terms and Conditions</a>
+    <a href="#schedule-b">Schedule B — Payments, Cancellation and Refund Policy</a>
+    <a href="#schedule-d">Schedule D — Support and Service Levels</a>
+    <a href="#schedule-e">Schedule E — White-Labelling Services</a>
+    <a class="dl" href="/legal/">Download as Word documents</a>
+  </aside>
+
+  <div>
+    <div class="callout">
+      <b>What you are agreeing to.</b> Ticking the box during registration accepts the Dispensary
+      Agreement and all Schedules on this page for every store location you add. Your specific
+      locations, systems, fee and billing start date are recorded on the Order Form we email you —
+      that Order Form is Schedule “C”. Nothing is charged when you register, and the agreement runs
+      month to month, cancellable on 30 days’ notice.
+    </div>
+
+    <section class="doc" id="agreement">
+      <div class="doc-head">
+        <div class="tag">Main agreement</div>
+        <h2>Poof Dispensary Agreement</h2>
+        <p>Sections 1–6. Party details, Authorized Locations and signature are recorded on your Order Form.</p>
+      </div>
+      <p><strong>POOF TECHNOLOGIES INC.<br />
+DISPENSARY AGREEMENT</strong></p>
+<p><strong>THIS AGREEMENT</strong> (“<strong>Poof</strong> <strong>Dispensary</strong> <strong>Agreement</strong>” or this “<strong>Agreement</strong>”) made as of this ____ day of _____, 2026 (“<strong>Effective Date</strong>”) between:</p>
+<table>
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 30%" />
+<col style="width: 11%" />
+<col style="width: 36%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th colspan="4"><strong>POOF TECHNOLOGIES INC.</strong> (<strong>“POOF”</strong>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Address</td>
+<td colspan="3">100 King Street West, Suite 5600, Toronto, ON, M5X 1C9</td>
+</tr>
+<tr class="even">
+<td></td>
+<td colspan="3"></td>
+</tr>
+<tr class="odd">
+<td><strong>Primary Contact</strong></td>
+<td colspan="3"></td>
+</tr>
+<tr class="even">
+<td>Name</td>
+<td>Bazif Khan</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Title</td>
+<td>Chief Executive Officer</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Email</td>
+<td>baz@poof.ca</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>- AND -</p>
+<table>
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 36%" />
+<col style="width: 12%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th colspan="4"><strong>__________________________</strong> (“<strong>Dispensary</strong>”)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Address</td>
+<td colspan="3"></td>
+</tr>
+<tr class="even">
+<td>Telephone</td>
+<td colspan="3"></td>
+</tr>
+<tr class="odd">
+<td>Fax</td>
+<td colspan="3"></td>
+</tr>
+<tr class="even">
+<td>E-mail</td>
+<td colspan="3"></td>
+</tr>
+<tr class="odd">
+<td colspan="4"></td>
+</tr>
+<tr class="even">
+<td colspan="4"><strong>For Corporations (if applicable):</strong></td>
+</tr>
+<tr class="odd">
+<td>Jurisdiction Incorporated Under</td>
+<td colspan="3"></td>
+</tr>
+<tr class="even">
+<td colspan="4"><strong>Primary Contact:</strong></td>
+</tr>
+<tr class="odd">
+<td>Name</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Title</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>E-mail</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>WHEREAS</strong> Poof wishes to offer to the Dispensary, and the Dispensary wishes to receive from Poof, a license to Poof Marketplace and (as defined in the Terms) and certain Services for the Term in accordance with the terms of this Agreement and any Schedules as mutually agreed to by the parties from time to time.</p>
+<p><strong>NOW THEREFORE</strong>, in consideration of the mutual covenants and agreements contained in this Agreement, and other good and valuable consideration, the receipt and sufficiency of which is hereby acknowledged, the parties hereby agree as follows:</p>
+<ol type="1">
+<li><p><strong>POOF TERMS AND CONDITIONS</strong></p></li>
+</ol>
+<p>The parties hereby agree that this Agreement is subject to the terms and conditions contained in the Poof Terms and Conditions attached as Schedule “A” to this Agreement (“<strong>Terms</strong>”), which, together with the other Schedules, form an integral part of this Agreement and which may be amended from time to time in accordance with provisions of the Terms respecting amendments. Capitalized terms not defined herein have the meaning ascribed to them in the Terms.</p>
+<ol start="2" type="1">
+<li><p><strong>POOF MARKETPLACE</strong></p></li>
+</ol>
+<p>2.1. The Dispensary agrees to license the use of the Poof Marketplace from Poof solely at the Location(s) attached as Schedule "C" to this Agreement (“Authorized Locations”) and under the terms described herein (and shall not use it to service Customers in other provinces or territories except with the written consent of Poof and where permitted under applicable law):</p>
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 72%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Agreement Term:</th>
+<th>This Agreement shall come into effect on the Effective Date and continue until terminated accordance with the terms herein and the Terms.</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Termination:</td>
+<td>Either party may terminate this Agreement by providing at least (30) days’ prior written notice to the other party.</td>
+</tr>
+</tbody>
+</table>
+<ol start="3" type="1">
+<li><p><strong>ADDITIONAL POOF SERVICES</strong></p></li>
+</ol>
+<p>Subject to this Agreement and the Terms and Policy, Poof shall provide the Dispensary with the following services:</p>
+<p><em>Setup, Onboarding and Training Services</em></p>
+<p>Poof will provide the following one-time setup, onboarding and training services at <u>no extra charge</u>:</p>
+<table>
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 78%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><u>Type of Service</u></th>
+<th><u>Description of Services</u></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Account Setup</td>
+<td>Poof will initially set up all accounts and then send over all details to the dispensary’s authorized representative</td>
+</tr>
+<tr class="even">
+<td>Initial Training</td>
+<td>Post account setup, Poof will set up a training call with the authorized representative of the dispensary</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><em>Support and Maintenance Services</em></p>
+<p>During the Term, Poof will provide maintenance and support services, as described in a Support and Service Level Agreement, attached hereto as Schedule “D”:</p>
+<p>Additional or upgraded maintenance and support services may be provided at the request of the Dispensary. The parties shall agree to the scope and applicable Fees of such support and maintenance to be provided in a Schedule to this Agreement.</p>
+<p><em>Marketing, Promotional and Business Analytics Services</em></p>
+<p>Poof may, in its sole discretion, offer the Dispensary with additional services, including, but not limited to marketing, promotion and business analytics services made available to the Dispensary from time to time. The details of such additional services, including the applicable scope of services, term and fees will be outlined in a Schedule to this Agreement or in an amendment to this Agreement.</p>
+<p><em>Delivery Services</em></p>
+<p>The Dispensary agrees to offer Delivery Services, if they have selected to upon registration, to Customers who place an Order through the Poof Customer application, as reflected on the Dispensary Account in the Poof Marketplace. The Dispensary shall be solely responsible for compliance with Applicable Law in relation to such Delivery Services, as further described in the Terms or a Schedule.</p>
+<p><em>Use of Third-Party Providers</em></p>
+<p>The Dispensary agrees that Poof has full discretion to select and retain, or replace, any third-party providers for the purposes of outsourcing or providing the Services to Dispensaries. For clarity, such Services may pertain to Customer support and handling of disputes. The Dispensary agrees that any Services provided to the Dispensary by any such third-party providers will be in full satisfaction of the obligations of Poof under this Agreement.</p>
+<ol start="4" type="1">
+<li><p><strong>WHITE-LABELING SOLUTIONS</strong></p></li>
+</ol>
+<p>During the Term, Poof may, at its discretion, provide additional services relating to the white-labeling of e-commerce websites, mobile and other applications, and other e-commerce solutions, including without limitation website menus and mobile menus (“Sites”) for the Dispensary under the terms described herein and pursuant to the Additional Terms for White-Labeling Services, attached hereto as Schedule “E”. Any such services by Poof relating to the Sites are provided subject to the terms hereunder and to the fees set out in Section 6 herein. Where Poof has not introduced a fee for a particular Site service, that service is provided at no cost until Poof introduces a fee in accordance with Section 6.6.</p>
+<p><em>Project and Scope of Work</em></p>
+<p><em><br />
+If Poof agrees to provide the White-Labeling Services to a Dispensary:</em></p>
+<ol type="a">
+<li><p><em>Setup</em>. Poof will schedule a call with the Dispensary’s authorized representative to set up a new Site on the Dispensary’s current domain or custom domain, as agreed upon.</p></li>
+<li><p><em>Initial training</em>. After the account set up Poof will conduct a 15-30 minute training session with the Dispensary’s authorized representative to go over admin controls and functionality.</p></li>
+</ol>
+<h2></h2>
+<ol start="5" type="1">
+<li><p><strong>REQUIRED EQUIPMENT AND SOFTWARE</strong></p></li>
+</ol>
+<h2></h2>
+<p>The Dispensary acknowledges that Poof will provide both hardware and software, associated with the Poof Marketplace and as otherwise described herein. In order to use the Poof Marketplace, the Dispensary must integrate with select POS systems approved by Poof and the use any or a combination of the following required hardware and software.</p>
+<table>
+<colgroup>
+<col style="width: 5%" />
+<col style="width: 22%" />
+<col style="width: 72%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Hardware</strong></th>
+<th><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1.</td>
+<td>POS Tablet</td>
+<td>As required by POS provider.</td>
+</tr>
+<tr class="even">
+<td>2.</td>
+<td>Order Tablet</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<table>
+<colgroup>
+<col style="width: 5%" />
+<col style="width: 22%" />
+<col style="width: 72%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Software</strong></th>
+<th><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1.</td>
+<td>Merrco</td>
+<td>Payment processor</td>
+</tr>
+<tr class="even">
+<td>2.</td>
+<td>Greenline POS</td>
+<td>POS Software</td>
+</tr>
+<tr class="odd">
+<td>3.</td>
+<td>Moneris</td>
+<td>Payment Processor</td>
+</tr>
+<tr class="even">
+<td>4.</td>
+<td>Cova Software</td>
+<td>POS software</td>
+</tr>
+<tr class="odd">
+<td>5.</td>
+<td>BlazePay</td>
+<td>Payment processor</td>
+</tr>
+<tr class="even">
+<td>6.</td>
+<td>CovaPay</td>
+<td>Payment processor</td>
+</tr>
+<tr class="odd">
+<td>7.</td>
+<td>Buddi</td>
+<td>E-commerce platform (where used by the Dispensary)</td>
+</tr>
+<tr class="even">
+<td>8.</td>
+<td>Dutchie</td>
+<td>E-commerce platform (where used by the Dispensary)</td>
+</tr>
+<tr class="odd">
+<td>9.</td>
+<td>Breadstack</td>
+<td>E-commerce platform (where used by the Dispensary)</td>
+</tr>
+<tr class="even">
+<td>10.</td>
+<td>Canfleet</td>
+<td>Last-mile delivery software (where used by the Dispensary)</td>
+</tr>
+<tr class="odd">
+<td>11.</td>
+<td>Onfleet</td>
+<td>Last-mile delivery software (where used by the Dispensary)</td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<ol start="6" type="1">
+<li><p><strong>FEES, PAYMENT TERMS</strong></p></li>
+</ol>
+<h2><em><strong>Fees</strong></em>. Subject to the Terms, the Policy, and the Service Fees provisions below, Poof grants the Dispensary a license to use the Poof Marketplace and any associated software or hardware in accordance with this Section 6. Fees payable by the Dispensary are set out in Sections 6.1 to 6.7 below.</h2>
+<h2></h2>
+<p><em>Service Fees</em></p>
+<p><strong>6.1</strong> <em>Marketplace Listing.</em> Poof lists every cannabis retail store holding a valid retail store authorization in Ontario on the Poof Marketplace, showing the store’s name and location only (a “Marketplace Listing”). A Marketplace Listing is provided at no cost, requires no integration, and is not transactable. No fee is payable by the Dispensary in respect of a Marketplace Listing.</p>
+<p><strong>6.2</strong> <em>Integrated Locations.</em> Once Poof has connected the Dispensary’s point-of-sale system at an Authorized Location, that location becomes an Integrated Location, is transactable on the Poof Marketplace, and forms part of the Poof Retail Network. Integration is performed by Poof as part of the setup and onboarding services described in Section 3 at no extra charge.</p>
+<p><strong>6.3</strong> <em>Service Fee.</em> The Service Fee is fifty dollars (CAD $50.00) per Integrated Location per month, plus applicable taxes. The Service Fee is billed monthly in advance and covers Poof’s costs of establishing and maintaining the integration with the Dispensary’s point-of-sale system, including the routing of Orders to that system, inventory and price synchronisation, and ongoing monitoring of the connection. Poof charges no commission, revenue share, or percentage of the Dispensary’s Revenue on any Order.</p>
+<p><strong>6.4</strong> <em>Referral Credit.</em> Where the Dispensary registers using a valid brand referral code issued by Poof, the Service Fee for the first three (3) consecutive months following the Billing Start Date is credited in full. Standard fees apply automatically from the fourth month. Only one referral code may be applied per Dispensary, and the credit is not transferable or redeemable for cash. For clarity, a referral credit is a discount on the paid Services and does not constitute Beta Testing.</p>
+<p><strong>6.5</strong> <em>Payment Method and Billing Start Date.</em> The Dispensary shall provide a valid payment method on registration, which Poof stores with its payment processor. Poof does not receive or store payment card numbers. No amount is charged on registration. Billing commences only on the Billing Start Date, being the date the Dispensary confirms its participation with an authorized representative of Poof, which Poof shall confirm to the Dispensary in writing. All fees are stated in Canadian dollars and are exclusive of HST, GST and any other applicable taxes, which are charged in addition.</p>
+<p><strong>6.6</strong> <em>Future Services and Fee Changes.</em> Poof may introduce additional Services, including e-commerce and white-labeling services under Section 4, at fees set out in a Schedule to this Agreement or in an amendment. Poof may amend the fees payable under this Section 6 on not less than thirty (30) days’ prior written notice. If the Dispensary does not accept an amended fee, it may terminate this Agreement under Section 2.1 before the amended fee takes effect.</p>
+<p><strong>6.7</strong> <em>Non-payment.</em> If a payment is not successfully processed, Poof may suspend the Dispensary’s Integrated Locations on the Poof Marketplace until the amount owing is paid. Suspension under this Section does not affect the Dispensary’s Marketplace Listing, which remains available at no cost.</p>
+<p><em>
+    </em></p>
+    </section>
+
+    <section class="doc" id="schedule-a">
+      <div class="doc-head">
+        <div class="tag">Schedule A</div>
+        <h2>Terms and Conditions</h2>
+        <p>The operative terms, including definitions, licence, services, data, liability and termination.</p>
+      </div>
+      <p><strong>SCHEDULE “A”</strong></p>
+<p><strong>POOF TECHNOLOGIES INC.<br />
+TERMS AND CONDITIONS<br />
+</strong></p>
+<p><strong>These Terms and Conditions</strong> (“<strong>Terms</strong>”) govern the delivery of the Services including the license to and use of the Poof Marketplace, to a Dispensary (“<strong>you</strong>”, “<strong>your</strong>”, and terms of similar meaning) made available by Poof Technologies Inc. (“<strong>we</strong>”, “<strong>us</strong>”, <strong>“Poof”</strong> and terms of similar meaning) and its licensors and suppliers.</p>
+<p>By accepting this Agreement, by (a) clicking a box indicating acceptance, (b) accepting or executing a Poof Dispensary Agreement that references this Agreement, or (c) by otherwise accessing or using the Services, including by downloading, accessing online or offline, or using the Poof Marketplace, you agree to be bound by these Terms, and all terms, policies and guidelines incorporated by reference in these Terms.</p>
+<p>The Poof Dispensary Agreement is automatically deemed to include all of the terms and conditions of these Terms; provided that whenever the provisions of the Poof Dispensary Agreement expressly conflict with these Terms, the conflicting provisions of the Poof Dispensary Agreement control and shall take precedence over the conflicting provisions of the Terms.</p>
+<h1>DEFINITIONS</h1>
+<h2>“Account Manager” shall mean a Poof employee or independent contractor that manages a given Dispensary Account and facilitates the onboarding and communications between Poof and the Dispensary.</h2>
+<h2>“Additional Services”</h2>
+<h2>“Administrator” means a person or persons assigned by the Dispensary to have the authority to act as the administrator of the Dispensary Account and the Poof Marketplace license to the Services on behalf of the Dispensary. </h2>
+<h2>“Applicable Law” means all applicable requirements, laws, statutes, codes, acts, ordinances, orders, decrees, injunctions, by-laws, rules, regulations, permits, licenses, authorizations, directions and agreements with all applicable government authorities, agencies, bodies or departments, having jurisdiction over this Agreement or the supply or use of the Poof Marketplace and the Services.</h2>
+<h2>“Cannabis” means the recreational cannabis, and/or other related goods, including accessories, as such products may be regulated under Applicable Law, purchased from the Dispensary through the Poof Marketplace, as identified in the Order(s) placed by Customers.</h2>
+<h2>“Cloud Provider”</h2>
+<h2>“Customer” means the Person placing (an) Order(s) through the Poof Customer application.</h2>
+<h2>“Delivery Services” means the services offered by the Dispensary regarding the delivery of products purchased from such Dispensary through the Poof Marketplace via the Poof Customer application </h2>
+<h2>“Dispensary” means a Person, who is bound by the terms of Poof Dispensary Agreement, and/or these Terms and Conditions, or any Schedule.</h2>
+<h2>“Dispensary Account” shall mean the account created on Poof Marketplace by an Account Manager, as revised for completeness and accuracy by an Administrator, on behalf of a Dispensary.</h2>
+<h2>“Dispensary Agreement”, “Poof Dispensary Agreement” and “this Agreement” means the Dispensary Agreement entered into by Poof and the Dispensary, including any schedules, these Terms, and any schedules to these Terms.</h2>
+<h2>“Dispensary Data” means any data or content inputted or automatically captured into the Poof Marketplace by the Dispensary or any of its Users and hosted on the servers of the Cloud Providers. </h2>
+<h2>“Driver” means delivery providers retained by the Dispensary based on an employment or independent contractor agreement, as permitted under Applicable Law, for the delivery of the Dispensary’s products, including Cannabis products, in accordance with Applicable Law.</h2>
+<h2>“Equipment”</h2>
+<h2>“Order” means an order placed by a Customer through the Marketplace for the purchase of Cannabis from the Dispensary.</h2>
+<h2>“Person” means an individual or legal entity, including but not limited to a corporation, sole proprietorship, limited partnership, association, or other entity, whether or not having legal status.</h2>
+<h2>“Personal Information” means any information relating to identifiable individuals, the collection, use or disclosure of which is regulated by Privacy Laws.</h2>
+<h2>“Privacy Laws” means any applicable federal, provincial and local laws, regulations and rules governing the collection, use and disclosure of information relating to identifiable individuals, including the <em>Personal Information Protection and Electronic Documents Act</em> (Canada) (“PIPEDA”), the <em>Personal Information Protection Act</em> (British Columbia), the <em>Personal Information Protection Act</em> (Alberta), and any similar legislation enacted by any province or territory of Canada, as they may be amended or updated from time to time. </h2>
+<h2>“Poof Data” means any data or content made available by Poof and/or its licensors through Poof Marketplace, including, without limitation, Personal Information pertaining to Customers.</h2>
+<h2>“Poof Marketplace” means the software application made available to Dispensaries, including Poof Data and the order management module to manage incoming orders, pursuant to these Terms, Poof Dispensary Agreement, any Schedules, rules and policies.</h2>
+<h2>“Revenue” </h2>
+<h2>“Schedule” means a schedule, which is attached to this Agreement, or which may be added hereafter by written agreement of the parties. </h2>
+<h2><strong>“Service Fee”</strong> means the recurring monthly subscription fee payable by the Dispensary to Poof in respect of each Integrated Location, as set out in Section 7.1 of these Terms and as more specifically described in the Poof Dispensary Agreement and/or the Order Form. For clarity, the Service Fee is a fixed periodic fee and is not a commission, revenue share, or percentage of the Dispensary’s Revenue.</h2>
+<h2><strong>“Integrated Location”</strong> means an Authorized Location whose point-of-sale system has been connected to the Poof Marketplace by Poof such that Orders may be routed to that Authorized Location.</h2>
+<h2><strong>“Integration Partner”</strong> means a third-party provider of point-of-sale, payment processing, e-commerce or last-mile delivery software used by the Dispensary at an Authorized Location, as identified by the Dispensary in the Poof Dispensary Agreement, the Order Form, or on registration.</h2>
+<h2><strong>“Order Form”</strong> means the order form generated on registration and accepted by the Dispensary, which records the Authorized Locations, the Integration Partners, the applicable Service Fee, and the Billing Start Date, and which forms part of this Agreement.</h2>
+<h2><strong>“Billing Start Date”</strong> means the date on which the Service Fee first becomes payable, being the date the Dispensary confirms its participation with an authorized representative of Poof, as confirmed by Poof to the Dispensary in writing.</h2>
+<h2>“Services” means the use of Poof Marketplace and any related services, including any Additional Services, provided to a Dispensary pursuant to a Poof Dispensary Agreement, these Terms, or any Schedule.</h2>
+<h2>“Term” </h2>
+<h2>“User” means an individual user who (i) is permitted to use the Poof Marketplace on behalf of the Dispensary; and (ii) agreed to these Terms. Users may include employees or contractors of the Dispensary.</h2>
+<h1>USER ACCOUNTS</h1>
+<h2><em>Provisioning and User Accounts.</em> Upon agreeing to a Poof Dispensary Agreement or accepting these Terms online, the initial Administrator of the Dispensary shall provide the required initial information to the Account Manager and such Account Manager will create the Dispensary Account and provide the pertinent login information to the Administrator. The Administrator(s) and/or User(s) of the Dispensary shall maintain the Dispensary Account up to date. The Initial Administrator may add other Administrators and authorize Users subject to the limitations and additional terms described in the Poof Dispensary Agreement. The Initial Administrator and other Administrators shall be deemed to have the authority to manage (including adding and removing) Users. Administrators may deactivate any User if the Administrator wishes to terminate access to the Service for any such User. Access to specific features of the Services may only be available to specific user types. Subject to any provision to the contrary, each Dispensary may operate through one Dispensary Account. </h2>
+<h2><em>Registration Data.</em> Administrators and Users agree to: (a) provide accurate, current and complete information as may be prompted by any registration forms on Poof Marketplace (“Registration Data”); (b) maintain the security of the their password; (c) maintain and promptly update the Registration Data, and any other information the they provide to Poof Marketplace, and to keep it accurate, current and complete; and (d) accept all risks of unauthorized access to the Registration Data and any other information provided to Poof. The Dispensary shall be responsible for all activity by Users on Poof Marketplace, including the activity performed on Poof Marketplace through the User accounts by an agent, representative, employee (including former employees who maintained access to the Services), or any other person acting on behalf of such User. It is the responsibility of the Dispensary to delete User accounts or otherwise remove access to Administrators or Users who should no longer be active (e.g. a User who is no longer an employee or contractor of the Dispensary).</h2>
+<h2><em>Beta Testing.</em> Pursuant to the Dispensary Agreement or a Schedule, Poof may make the applicable Services available to the Dispensary on a trial basis free of charge or on a discount (“Beta Testing</h2>
+<h2><em><strong>Promotional Credits.</strong></em> For clarity, a promotional credit, discount or referral credit applied to the Service Fee, including any credit granted in connection with a brand referral code, is a discount on the paid Services and does not constitute Beta Testing. The warranties, support obligations, service levels and limitations of liability that apply to the paid Services continue to apply in full during any such credit period.</h2>
+<h2><em>Franchisees. </em>Subject to any provision to the contrary in a Schedule, all franchisees operating a branded Dispensary or store concept licensed by the Dispensary and/or all owned branded Dispensary(s) and store concept(s) of the Dispensary shall be included and subject to the terms hereunder provided that the individual franchisee: (1) is in compliance with its franchise agreement; and (2) enters into an agreement in substantially the same form as the supplemental agreement (the “Supplemental Agreement”) provided by Poof to such franchisee. Notwithstanding the foregoing, Poof reserves the right to enter into direct agreements with such franchisees and agree to different terms compared to the terms and conditions agreed upon by the Dispensary pursuant to this Agreement. </h2>
+<h1>LICENSE TO POOF MARKETPLACE AND LICENSE RESTRICTIONS</h1>
+<h2><em>License to Poof Marketplace.</em> Poof hereby grants to the Dispensary and authorized Administrator(s) and Users a non-exclusive, non-transferable, non-sublicensable license to use Poof Marketplace and solely permit the Dispensary, and their Administrator and/or Users to use the functionality contained within Poof Marketplace for legitimate purposes during the Term at the location(s) specified in the applicable Dispensary Agreement. </h2>
+<h2><em>License Restrictions</em>. Except as set forth in this Agreement, and to the extent contrary by Applicable Law, the Dispensary represents that the Dispensary, including their Administrator(s) and User(s), shall not (a) make or distribute copies of Poof Marketplace; (b) alter, merge, adapt or translate Poof Marketplace, or decompile, reverse engineer, disassemble, or otherwise reduce Poof Marketplace to a human-perceivable form; (c) sell, rent, lease, host or sublicense Poof Marketplace (except as is incidental or necessary for the provision of services or delivery of products to Customers); (d) use the Services in a manner that breaches the rights of any third party, any contract or legal duty or violate any Applicable Law; (e) copy the Services or any part, feature, function or user interface thereof; (f) access or use the Services in order to build a competitive business or service; and/or (g) use the Services other than for its intended purposes; and (h) modify Poof Marketplace or create derivative works based upon Poof Marketplace. Notwithstanding the foregoing, the Dispensary will retain the right to exploit any Dispensary Data which may be incorporated into, reside in, or form a part of the Dispensary Account. </h2>
+<h2><em>Required Equipment and Software</em>. The Dispensary acknowledges that the Dispensary may be required to purchase and maintain access to hardware or additional software in order to access and use Poof Marketplace and receive the Services, including without limitation point-of-sale (POS) devices and tablets (“Equipment”) and/or any software for the required integration, which shall be purchased or obtained by Dispensary at Dispensary’s own expense. The parties hereto may agree upon the purchase of additional Equipment and software and accompanying Services after the execution of this Agreement by completing a new Schedule. Any such additional Schedules, if any, shall hereinafter be part of this Agreement, subject to the Terms and the Poof Dispensary Agreement. </h2>
+<h2><em><strong>Integration Partner Authorization.</strong></em> The Dispensary authorizes Poof to contact its Integration Partners for the sole purpose of establishing, configuring and maintaining the technical connection between the Dispensary’s systems and the Poof Marketplace, and to identify itself to those Integration Partners as acting on the Dispensary’s behalf for that purpose. Poof shall copy the Dispensary on such communications. The Dispensary further authorizes each Integration Partner to disclose to Poof the access credentials, API keys, store identifiers and configuration data reasonably required for that purpose (“Integration Credentials”).</h2>
+<h2><em><strong>Handling of Integration Credentials.</strong></em> Poof shall use Integration Credentials solely to provide the Services, shall store them using industry-standard technical and organizational safeguards, and shall not disclose them to any third party other than a Cloud Provider or subcontractor bound by obligations no less protective than those in this Agreement. Integration Credentials shall be supplied through the authenticated Poof administrative portal or directly by the Integration Partner, and shall not be requested or transmitted by unencrypted e-mail. This authorization continues for the Term and terminates automatically on expiry or termination of this Agreement, following which Poof shall cease all use of the Integration Credentials and delete or return them within thirty (30) days of written request. The Dispensary may revoke this authorization in respect of any Integration Partner on written notice, and acknowledges that doing so may prevent Poof from providing the Services at the affected Authorized Location.</h2>
+<h2><em><strong>Dispensary Authority.</strong></em> The Dispensary represents and warrants that the individual accepting this Agreement on its behalf is authorized to bind the Dispensary, that the Dispensary holds a valid retail authorization for each Authorized Location, and that it is entitled to grant the authorizations in this Section in respect of each Integration Partner.</h2>
+<h1>HOSTING </h1>
+<h2><em>Hosting.</em> Poof will cause Poof Marketplace to be hosted on a cloud server maintained by one or more reputable third-party providers (“Cloud Providers”). Poof will be responsible for contracting with the Cloud Providers, and for paying all fees and charges of the Cloud Providers. All Dispensary Data stored on the Services is located on servers operated by the Cloud Providers in Canada or the United States.</h2>
+<h2><em>Backups</em>. Poof will create a backup or cause its Cloud Providers to create a backup of Poof Marketplace (including all Dispensary Data) no less frequently than once every twenty-four (24) hours. Upon request from the Dispensary, Poof will provide the Dispensary with a copy of the most recent backup available. </h2>
+<h1>SERVICES</h1>
+<h2><em>Services</em>. In addition to the license to access and use the Poof Marketplace, Poof may, at its option, offer the Dispensary certain additional services (“Additional Services”), which may include setup, onboarding, training, technical support and maintenance services, customer support, dispute resolution and such other services as described in the Poof Dispensary Agreement and any Schedules entered into by the parties. Such Additional Services will be supplied by Poof and will be acquired by the Dispensary in accordance with the terms of the Poof Dispensary Agreement and/or a Schedule. Each Schedule shall contain a statement of the Additional Services to be provided pursuant to the Schedule, the applicable Fees, and the expectations of the parties as to the timing of performance of the Additional Services pursuant to such Schedule.</h2>
+<h2><em>Delivery Services.</em> Subject to the Dispensary Agreement or a Schedule, the Dispensary may offer delivery services to Customers, who have placed an Order to purchase the Dispensary’s products through the Poof Customer application as reflected on the Dispensary Account (“Delivery Services”), as long as all aspects of the Delivery Services are conducted by the Dispensary and those it is responsible for in accordance with applicable law. The parties agree and the Dispensary acknowledges that the Dispensary shall be exclusively liable for any claims pertaining to or arising from such Delivery Services and the Dispensary shall be solely responsible for all compliance with Applicable Law in relation with such Delivery Services, including but not limited to identification and verification of Customers purchasing any products, including Cannabis products, from such Dispensary through the Poof Marketplace. If the Dispensary offers Delivery Services, the Dispensary shall indicate in the Dispensary Dashboard or an Agreement or a SchedulePayments, Cancellation, and Refund Policy, or a Schedule, Poof shall not be liable for any losses or damages incurred by the Dispensary due to acts or inaction of a Driver selected by the Dispensary to offer such Delivery Services. Any indemnification claims received by Poof from Customers in connection with or arising from such Delivery Services shall be dealt with in accordance with Poof’s dispute resolution policies, the implementation of which may be assigned by Poof to a third-party service provider selected in Poof’s sole discretion, taking into account the Dispensary’s terms and conditions for the sale of its products. To the extent that Poof is required to pay Customers any amounts arising from Delivery Services, the Dispensary agrees to promptly and fully indemnify Poof for any and all indemnification claims in connection with or arising from the Dispensary’s Delivery Services.</h2>
+<h2><em>Order of Interpretation</em>. Each Schedule is automatically deemed to include all the terms and conditions of this Agreement; provided that whenever the provisions of a Schedule expressly conflict with this Agreement, the agreements should be interpreted in the following order: (a) the conflicting provisions of the Schedule (except for Schedule B – Service Level Agreement) control and take precedence over the conflicting provisions of this Agreement, then (b) the conflicting provisions of the Poof Dispensary Agreement shall take precedence over the conflicting provisions of these Terms. For clarity, the provisions of the Poof Dispensary Agreement shall take precedence over the provisions of Schedule B – Service Level Agreement.</h2>
+<h2><em>Change Request.</em> If the Dispensary wishes at any time to request a change in the Additional Services under the Poof Dispensary Agreement or a Schedule, or if the Dispensary requests Poof to provide additional Services outside the scope of the Additional Services that are specifically described in the Poof Dispensary Agreement or a Schedule, the parties will work towards the execution of a new Schedule outlining the additional services in the event Poof agrees to such amendments, which may unreasonably withheld.</h2>
+<h2><em>Services</em>. Poof shall in all material respects perform the requested Services in accordance with the Poof Dispensary Agreement, these Terms and the applicable Schedule(s), and in a timely, diligent and professional manner. However, the timely and effective completion of any such Services requires the successful co-operation of the parties and the timely performance by each of them of their obligations hereunder, including delivery or (ongoing) provision by Dispensary to Poof of information and materials and the timely performance by Dispensary of the various activities, in each case either expressly or implicitly described in the Poof Dispensary Agreement or a Schedule, as the case may be. </h2>
+<h1>DISPENSARY REPRESENTATIONS AND WARRANTIES; DISPENSARY RESPONSIBILITIES</h1>
+<h2><em>Dispensary Representations and Warranties.</em> The Dispensary represents and warrants that the Dispensary’s use of the Services and the use of the Services by the Dispensary’s Administrator(s) and Users shall (a) be consistent with this Agreement and any licenses provided; and (b) comply with Applicable Law. Notwithstanding the foregoing, the Dispensary explicitly represents and warrants that:</h2>
+<ol type="a">
+<li>
+<p>the Dispensary complies with Canadian federal and/or provincial health, food, marketing and/or advertising, and/or other laws, rules, standards and regulations, relating but not limited to the marketing and/or advertising, sale, and/or distribution of Cannabis;</p>
+</li>
+<li>
+<p>the Dispensary has obtained and maintains in good standing any required licenses and/or permits to advertise and or market, sell, and/or distribute Cannabis;</p>
+</li>
+<li>
+<p>the Dispensary shall comply with Applicable Law with respect to the Dispensary’s hours and location of operation;</p>
+</li>
+<li>
+<p>the Dispensary’s description of the products it advertises and/or markets, sells, and/or distributes, including Cannabis products, is true and accurate and reflects the characteristics, attributes, and risks attached to each and every item offered for sale by the Dispensary;</p>
+</li>
+<li>
+<p>the Dispensary’s description of Cannabis edible items is true and accurate, including any references pertaining to food restrictions, such as vegetarian, vegan, gluten-free, as well as allergens;</p>
+</li>
+<li>
+<p>the Dispensary shall not cause any personal health information, as defined in PIPEDA, to be collected, stored or used by or through the Poof Marketplace or Poof Data; and</p>
+</li>
+<li>
+<p>the Dispensary shall promptly notify Poof of any changes affecting its permit and/or license, or generally the Dispensary’s legal, regulatory or practical ability to (continue to) offer, market/advertise, sell, and/or distribute Cannabis (or select Cannabis products), or any warnings or restrictions with respect to the aforementioned activities imposed against the Dispensary by any regulatory or other body or Person. Poof reserves the right to discontinue or suspend the delivery of the Services until such legal restrictions have been waived, in addition to any other remedies Poof can pursue pursuant to these Terms, the <strong>Poof Dispensary Agreement</strong>, and/or any Schedule.</p>
+</li>
+</ol>
+<h2>The Dispensary shall be liable for any misrepresentation under this Section, including for any acts and/or omissions of any of its Administrator(s), Users, directors, officers, employees, contractors, representatives or agents as if such act or omission were an act or omission of the Dispensary. The Dispensary hereby acknowledges that Poof is not responsible or liable for monitoring the Dispensary’s compliance with Applicable Law, as the Dispensary represents and Poof hereby relies on such representation that the Dispensary is solely and exclusively responsible for monitoring and adhering to its obligations and meeting all legal and other requirements imposed by Applicable Law.</h2>
+<h2><em>Poof Responsibilities.</em> Poof will, in a timely manner:</h2>
+<ol type="a">
+<li><p>display the Dispensary’s logo; a listing of the Dispensary’s locations; and a list of the Dispensary’s Cannabis items on the Poof Customer application;</p></li>
+<li><p>notify the Dispensary and/or display all Orders from eligible Customers into the dashboard of the Dispensary Account (for the Dispensary to accept or reject) subject to any restrictions imposed by Applicable Law;</p></li>
+<li><p>invoice the Dispensary in accordance with the parties’ agreement(s).</p></li>
+</ol>
+
+<p>Notwithstanding the foregoing, Poof shall not be deemed to be in violation of the Terms &amp; Conditions or the Dispensary Agreement due to delay or non-performance of the matters described in this section.</p>
+
+<h2><em>Dispensary Responsibilities</em>. The Dispensary agrees that it shall secure and maintain the Equipment at the Dispensary’s location(s) and in the condition necessary for accessing the Services and that the Dispensary shall be responsible for providing and maintaining its own Internet access with the necessary bandwidth speeds as recommended by Poof. The Dispensary also represents and warrants that it has the right to enter into this Agreement and to allow Poof to perform the Services. In addition to the Dispensary responsibilities listed herein, the Dispensary shall, in a timely manner:</h2>
+<ol type="a">
+<li><p>link its inventory to the Poof Marketplace through the API instructions provided by Poof and maintain such connection uninterrupted throughout the Term;</p></li>
+<li><p>permit Poof to monitor the Dispensary’s inventory, pricing, and store information, including promptly notifying Poof and promptly make updates via the Dispensary Account to reflect the most up-to-date products, including Cannabis products, pricing, expiry date, and other information, characteristics, availability, or descriptions of such products (if such information is not automatically captured in the Poof Marketplace) or immediately notify Poof of any errors, inconsistencies, or changes in writing;</p></li>
+<li><p>allow Poof to show the Dispensary’s inventory and store information on the Poof Marketplace and share such information with Customers through the Poof Customer application;</p></li>
+<li><p>promptly notify Poof of any required consumer-facing warnings, charges, opt-in requirements, and instructions associated with the Dispensary’s products, including Cannabis products;</p></li>
+<li><p>confirm and accept all Orders placed by eligible Customers though the Poof Customer application from the Dispensary’s then current inventory, or promptly notify Poof is any such Orders are not accepted providing an explanation in writing;</p></li>
+<li><p>subject to a Schedule, prepare the Dispensary’s purchased products, including Cannabis products, pursuant to each Order for pickup by a Driver or pickup from a Customer at the designated time and adhere to strict delivery timelines or promptly update Poof and the respective Customer of anything that can affect such delivery timeline;</p></li>
+<li><p>process Orders in the order in which they are received;</p></li>
+<li><p>notify Poof of its days and hours of operation, and remain open for business on Poof Marketplace the same days and hours of operation as the Dispensary’s in-store business, as well as notify Poof of (i) any changes to the Dispensary’s hours of operations on holidays, or (ii) if the Dispensary closes earlier than the Dispensary’s standard hours of operation, or (iii) plans to close earlier than the Dispensary’s standard hours of operation;</p></li>
+<li><p>notify all Dispensary’s store staff members of the relationship with Poof immediately upon execution of this Agreement;</p></li>
+<li><p>on an ongoing basis, review and confirm the transactions, fees and charges on Orders via the Dispensary Account, and promptly communicate to Poof any inaccuracies; and</p></li>
+<li><p>if the Dispensary offers Delivery Services, provide Poof with a flat fee and the radius of such delivery services from the Dispensary’s physical location, and promptly update Poof of any pertinent changes to such information.</p></li>
+</ol>
+<h2><em>Dispensary Indemnity.</em> The Dispensary shall be solely responsible for all inputs, selection and use of the Services and the provision, updating, uploading, modification, and maintenance of all Dispensary Data or other data transmitted, received or created using the Services, even if transmitted, received or created by someone else or automatically captured through the Poof Marketplace with the Dispensary’s explicit or implicit consent. The Dispensary agrees to defend, indemnify and hold Poof, its directors, officers, employees, agents, contractors and affiliates harmless from any loss, damage or liability which may result therefrom or from any act or omission, negligence or malfeasance, or any breach by the Dispensary, its Administrator(s) and/or its Users of this Agreement, including but not limited to any violation or alleged violation of any applicable retail, food, health, and/or safety laws, codes, rules, and/or regulations related to the promotion, marketing, advertising, sale, delivery, and/or distribution of Cannabis by the Dispensary, or breach of the Terms &amp; Conditions and the Dispensary Agreement and any other agreements entered into between the Parties, except to the extent such losses were caused directly by the gross negligence or willful misconduct of Poof.</h2>
+<h2><em>Acceptable Use of the Services.</em> The Dispensary and its Administrator(s) and/or Users may not:</h2>
+<ol type="a">
+<li><p>use, or encourage, promote, facilitate or instruct others to use the Services for any illegal, harmful or offensive use or to transmit, store, display, distribute or otherwise make available content that is illegal, harmful or offensive;</p></li>
+<li><p>use the Services to violate the security or integrity of any network, computer or communications system, software application, or network or computing device;</p></li>
+<li><p>make network connections to any users, hosts, or networks unless the Dispensary has permission to communicate with them; and/or</p></li>
+<li><p>distribute, publish, send or facilitate the sending of unsolicited mass e-mail or other messages, promotions, advertising or solicitations (like ‘spam’), including commercial advertising and informational announcements.</p></li>
+<li><p>Use the Services, Poof Data, or Poof Marketplace to collect, disclose, or use any personal health information, as defined under applicable privacy legislation. This includes, but is not limited to, any information regarding an individual's physical or mental health, health care history, or payment for health care services. You acknowledge that any collection, use or disclosure of personal health information may result in the termination of your Dispensary Account and potential legal action.</p></li>
+</ol>
+<h1>FEES, EXPENSES AND PAYMENT</h1>
+<h2><em><strong>Revenue and Service Fee.</strong></em> Except as otherwise specifically provided in the Poof Dispensary Agreement and/or any Schedule, Customers shall pay the Dispensary directly for any Orders, including any charges, Delivery Services, and taxes, as identified by Poof and/or the Dispensary. Poof does not take title to, handle, or sell any Cannabis product, and charges no commission, revenue share, or percentage of Revenue on any Order. In consideration for the Services, the Dispensary shall pay Poof the Service Fee, being a recurring monthly fee for each Integrated Location as set out in the Poof Dispensary Agreement and/or the Order Form. The Service Fee is billed monthly in advance, is stated in Canadian dollars, and is exclusive of HST, GST and any other applicable taxes, which are charged in addition. No Service Fee is payable in respect of an Authorized Location before it becomes an Integrated Location, and no amount is charged before the Billing Start Date.</h2>
+<h2><em>Payment Providers</em>. Payments may be processed through third-party payment or credit card providers, selected at Poof’s absolute discretion. The Dispensary shall be responsible for any applicable fees charged by such third-party payment providers.</h2>
+<h2><em>Taxes.</em> Poof shall display on the Poof Customer application and charge Customers the prices for products, including Cannabis products, (as identified by the Dispensary in the Poof Marketplace), including the applicable taxes and charges as listed by the Dispensary and any additional charges determined by Poof. The Dispensary shall be responsible for remitting all taxes, duties, and other governmental charges on the sale of Dispensary’s Cannabis products to the appropriate authorities. Poof shall be responsible for all taxes, duties, and other governmental charges pursuant to the delivery of the Services and the collection of the respective Service Fees. </h2>
+<h2><em>Refunds and Re-Orders.</em> For more information about Poof’s cancellation, refund, and re-orders policy, we encourage you to read and understand our Payments, Cancellation, and Refund Policy, found <a href="https://poof.ca/privacy-policy"><mark>here</mark></a>. By accepting these Terms or by accessing the Services, you represent that you have read and agreed to the terms of our Payments, Cancellation, and Refund Policy, incorporated into and subject to these Terms.</h2>
+<h2><em>Modification of Fees.</em> Unless as otherwise provided in the Dispensary Agreement or a Schedule, the Provider reserves the right to amend the Fees on or related to the Services from time to time, upon providing the Dispensary with thirty (30) days advanced written notice by e-mail or on the dashboard of the Dispensary Account, prior to any Renewal Term (defined below). If the Dispensary does not accept the amended or new Fees, the Dispensary must terminate the Agreement prior to the end of the thirty (30) day period. If the Agreement is not terminated prior to the start of the Renewal Term, the Dispensary or any of its Users’ continued use of the Services after the effective date of the change shall be construed as the Dispensary’s agreement to the new or changed Fees.</h2>
+<h1>INTELLECTUAL PROPERTY, DISPENSARY DATA AND PRIVACY</h1>
+<h2><em>Ownership of Poof Marketplace.</em> Except for any grant of licenses in this Agreement or as otherwise expressly provided in this Agreement, Poof and its licensors, as applicable, shall retain all copyright, patent rights, trade secret rights, trademarks and other proprietary rights or interests (“Intellectual Property Rights”) in the Poof Marketplace. Nothing in this Agreement shall be deemed to convey to the Dispensary or any other party, any ownership right, in or to Poof Marketplace, including Poof Data. </h2>
+<h2><em>Ownership of Dispensary Data.</em> </h2>
+<h2><em>License from Dispensary to Poof.</em> The Dispensary hereby grants to Poof an exclusive, transferrable, irrevocable, perpetual, worldwide, royalty-free license to use, modify, and create derivatives from the Dispensary Data for any and all purposes, including but not limited to sublicensing and distribution to third parties, including without limitation to brand partners involved in the branding, production and sale of cannabis products. This license allows Poof to fully monetize and distribute the data as they see fit without any restrictions or limitations provided it is done in accordance with Applicable Law. </h2>
+<h2><em>All Other Rights Reserved, Further Assurances</em>. Except as expressly set forth herein or in the Poof Dispensary Agreement or a Schedule, all Intellectual Property Rights are expressly reserved by the parties. The Dispensary or Poof, as applicable, shall execute and deliver such instruments and take such other steps as may be requested by Poof or the Dispensary, as applicable, from time to time in order to give effect to the provisions of this Article.</h2>
+<h2><em>Privacy Laws.</em> The Dispensary represents that the Dispensary, including its authorized Administrator(s) and/or Users, have complied with all applicable Privacy Laws in connection with the use and disclosure of Personal Information, including the Personal Information of Customers, collected by Poof and disclosed to the Dispensary for the purposes of this Agreement. Poof represents that Poof’s collection, use, and disclosure of Personal Information, pertaining to individuals, including without limitation Customers, complies with all applicable Privacy Laws and all individuals to whom such Personal Information relates have consented to Poof’s collection, use and disclosure of such Personal Information for the purposes disclosed in this Agreement or Poof’s Privacy Policy.</h2>
+<h2><em>Third Party/Open-Source Poof Marketplace.</em> Poof Marketplace may contain third party software and/or open-source software, which may be subject to third party licenses and require notices and/or additional terms and conditions (“Third-Party Licenses”). These Third-Party Licenses are made a part of and incorporated into these Terms. By accepting these Terms, the Dispensary and its Users are also accepting the Third-Party Licenses, if any, set forth therein. To view the Third-Party Licenses, please contact contact@poof.ca.</h2>
+<h2><em>License by Dispensary to Use Feedback.</em> The Dispensary grants Poof a worldwide, perpetual, irrevocable, royalty-free license to use and incorporate into its services any suggestion, enhancement request, recommendation, correction or other feedback provided by the Dispensary or Users relating to the operation of Poof Marketplace or the Services.</h2>
+<h2><em>Aggregate Data</em>. The Dispensary acknowledges that Poof may use aggregate, deidentified data related to the Dispensary’s transactions in connection with the Services (“Aggregate Data”) and may share Aggregate Data with third-parties as it deems applicable for its own commercial purposes.</h2>
+<h1>DISCLAIMER AND LIMITATION OF LIABILITY</h1>
+<h2><em>Disclaimer</em>. Except as set out in the Poof Dispensary Agreement or this Agreement, and/or any Schedule, the Services are provided to the Dispensary and authorized Users on an “as is” basis, without warranties from Poof of any kind, either express or implied. Poof expressly disclaims all other warranties, express or implied, including, without limitation implied warranties of merchantability, fitness for a particular purpose, title and non-infringement, unless otherwise specified in the applicable the Poof Dispensary Agreement. Poof does not warrant that the Services will be error-free or will operate without interruption. </h2>
+<h2><em>No Indirect, Etc. Damages.</em> Under no circumstances shall either party be liable to the other party for any claim for (i) indirect, special or consequential damages, (ii) compensation for loss of profits, anticipated revenue, savings or goodwill, or (iii) exemplary, aggravated or punitive damages howsoever incurred; in each case under any theory of law or equity, arising out of or in any way related to this Agreement or any Services, even if advised of the possibility thereof. </h2>
+<h2><em>Limitation of Aggregate Liability.</em> Except as otherwise specifically provided under this Agreement, the liability of either party for any claim, demand or cause of action whether based on contract, tort (including negligence) or otherwise, or for any losses, damages, costs and expense (including but not limited to legal fees) (collectively, “Losses”) arising out of or resulting from this Agreement shall not exceed the Fees paid or payable by the Dispensary to Poof under this Agreement in the three (3) months preceding the Loss or CAD $1,000 (whichever is less). </h2>
+<h2><em>Reasonableness of Limitations.</em> </h2>
+<h1>INDEMNIFICATION</h1>
+<h2><em>Indemnity by Dispensary.</em> The Dispensary agrees to defend, indemnify and hold Poof, its directors, officers, employees, agents, contractors and affiliates, harmless from any loss, damage or liability, including all reasonable legal costs, that Poof may incur as a result of or in connection with any claim relating to or resulting from any breach by the Dispensary of the Dispensary’s obligations under this Agreement, including its obligation to comply with all Applicable Law, or any acts or omissions or negligence or malfeasance of Dispensary, or its employees, contractors and agents.</h2>
+<h2><em>Indemnity by Poof</em>. Poof agrees to defend, indemnify and hold the Dispensary, its directors, officers, employees, agents, contractors and affiliates, harmless from any loss, damage or liability, including all reasonable legal costs, that the Dispensary may incur as a result of or in connection with: (a) any valid claim that Poof Marketplace or any portion of it infringes the intellectual property rights of any third party; (b) any third-party claim relating to or resulting from any breach by Poof of Poof’s obligations under this Agreement, including its obligation to comply with all Applicable Law.</h2>
+<h1>TERM</h1>
+<h2><em>Term.</em> The term of this Agreement (“Term”) shall commence on the Effective Date set out in this Agreement or if not executed the date the Dispensary electronically accepts these terms on Poof Marketplace, and will continue for any term identified as a Beta Testing Term, and if not terminated prior to expiry of the Beta Testing period, then the length of time described in the Dispensary Agreement as the monthly initial term or the annual initial term, as applicable (each an “Initial Term”). Thereafter, this Agreement will automatically renew for successive terms equal to the length of time of the Initial Term (“Renewal Terms”), unless terminated in accordance with this Agreement. </h2>
+<h2><em>Termination.</em> </h2>
+<ol type="a">
+<li><p><em>Breach.</em> Either party may terminate this Agreement if the other party materially breaches this Agreement, including any failure to make payments when due, and such other party fails to cure such breach in all material respects within fifteen (15) days after being given notice of the breach from the non-breaching party. For clarity, Poof may terminate this Agreement if the Dispensary abuses any policy of Poof, or Poof receives over three (3) complaints within a period of two (2) consecutive weeks pertaining to the Dispensary and/or the Dispensary’s Administrator and/or Users, and/or for poor Order accuracy or high delays.</p></li>
+<li><p><em>Insolvency.</em> Either party may terminate this Agreement, upon written notice to the other party, if such other party is subject to proceedings in bankruptcy or insolvency, voluntarily or involuntarily, if a receiver is appointed with or without the other party’s consent, if the other party assigns its property to its creditors or performs any other act of bankruptcy, or if the other party becomes insolvent and cannot pay its debts when they are due.</p></li>
+<li><p><em>Termination Prior to Renewal.</em> Except in the case of a month-to-month term, either party may terminate this Agreement by providing written notice to the other party at least (60) days prior to the end of the then current term. For month-to-month terms, either Party may provide thirty (30) days prior written notice to terminate this Agreement. For greater certainty, such notice may be given prior to the end of such current term but will only take effect at the end of the then current term.</p></li>
+<li><p><em>Temporary Deactivation of Dispensary Account</em>. The Dispensary may suspend the use of or temporarily deactivate the Dispensary Account and/or the access to the Services, provided that such temporary suspension shall not exceed three (3) consecutive or cumulative months in a calendar year. If the Dispensary wishes to temporarily deactivate the Dispensary Account and/or temporarily suspend the access Services for a period that exceeds the aforementioned time period, Poof reserves the right to terminate the Agreement in accordance with the Terms. For clarity, in the case of a month-to-month term, the Dispensary’s suspension or temporary deactivation of the Dispensary Account shall come into effect only at the end of the then monthly term.</p></li>
+</ol>
+<h2><em>Modification of Service and Suspension of Users</em>. Notwithstanding any provision of these Terms, Poof reserves the right, in its sole discretion, with notice to the Dispensary, but without any liability to the Dispensary or any Administrator and/or User, to (a) terminate a User’s license to use Poof Marketplace, or any portion thereof; (b) block or prevent a User’s future access to and use of all or any portion of Poof Marketplace; (c) remove Cannabis products from the Poof Marketplace if Poof determines that such Cannabis products could subject Poof or its Customers and users to undue regulatory risk, health and safety risk, or other liability; (d) change, suspend, or discontinue any aspect of Poof Marketplace or the Services; and (e) impose limits on Poof Marketplace or the Services. </h2>
+<h2><em>Effect of Termination.</em>  </h2>
+<ol type="a">
+<li><p>Each party shall promptly deliver to the other party or discontinue live sharing of all papers, databases, documents, software programs, and other tangible items (including copies) constituting the other party’s Confidential Information in its possession or under its control, or on request, destroy such materials and certify that it has done so;</p></li>
+<li><p>upon a request by the Dispensary within thirty (30) days of termination, Poof will within fifteen (15) days of such request, provide to the Dispensary a copy of the Dispensary Data in a format that is readable using commercially available third-party software and or Poof Marketplace, including .csv, .xls and .xlsx formats; and</p></li>
+<li><p>upon a request by the Dispensary within thirty (30) days of termination, Poof may delete or cause to be deleted all Dispensary Data from all computer systems owned and controlled by Poof.</p></li>
+</ol>
+<h1>CONFIDENTIALITY</h1>
+<h2><em>Definition of Confidential Information.</em> “Confidential Information” means all information disclosed by a party (“Disclosing Party”) to the other party (“Receiving Party”), whether orally or in writing, that is designated as confidential or that reasonably should be understood to be confidential given the nature of the information and the circumstances of disclosure. Dispensary’s Confidential Information includes Dispensary Data. Poof’s Confidential Information includes Poof Marketplace, the Services and any additional services agreed upon by the parties, and the terms and conditions of this Agreement. However, Confidential Information does not include any information that (a) is or becomes generally known to the public without breach of any obligation owed to the Disclosing Party; (b) was known to the Receiving Party prior to its disclosure by the Disclosing Party without breach of any obligation owed to the Disclosing Party; (c) is received from a third party without breach of any obligation owed to the Disclosing Party; or (d) is independently developed by the Receiving Party.</h2>
+<h2><em>Protection of Confidential Information.</em> The Receiving Party will (a) use the same degree of care that it uses to protect the confidentiality of its own confidential information of like kind (but not less than reasonable care); (b) not use any Confidential Information of the Disclosing Party for any purpose outside the scope of this Agreement; and (c) except as otherwise authorized by the Disclosing Party in writing, limit access to Confidential Information of the Disclosing Party to those of its and its affiliates’ employees and contractors who need that access for purposes consistent with this Agreement and who have signed confidentiality agreements with the Receiving Party containing protections no less stringent than those herein. </h2>
+<h2><em>Compelled Disclosure.</em> The Receiving Party may disclose Confidential Information of the Disclosing Party to the extent compelled by law to do so, provided the Receiving Party, if permitted by law, gives the Disclosing Party prior notice of the compelled disclosure.</h2>
+<h2><em>Destruction.</em> Each party, upon the request of the other party or within thirty (30) days after termination of this Agreement (whichever is earlier), agrees to return and cause its representatives to return, all copies of Confidential Information belonging to or provided by the other party or destroy such copies as directed by that party and certify their destruction. </h2>
+<h2><em>Indemnity.</em> </h2>
+<h1>GENERAL</h1>
+<h2><em>Governing Law.</em> This Agreement shall be governed by and construed in accordance with the laws of the Province of Ontario and the laws of Canada applicable therein. This Agreement shall be treated, in all respects, as an Ontario contract.</h2>
+<h2><em>Survival.</em> </h2>
+<h2><em>Dispute Resolution.</em></h2>
+<ol type="a">
+<li><p>This out the process (the “<strong>Dispute Resolution Process</strong>”) for resolving all disputes, issues, controversies, and/or claims arising out of or in connection with this Agreement, or in respect of any legal relationship associated with or derived from this Agreement (“<strong>Disputes</strong>”).</p></li>
+<li><p>Except as otherwise agreed upon in the Poof Dispensary Agreement or any Schedule, either party may initiate the Dispute Resolution Process by sending a notice of a Dispute (a “<strong>Dispute Notice</strong>”) to the other party. Upon delivery of a Dispute Notice to either party, each party shall appoint a knowledgeable, responsible, non-lawyer, management representative to meet and negotiate in good faith with the representative of the other party in order to resolve the Dispute.</p></li>
+<li><p>All Disputes that are not resolved within thirty (30) days following delivery of a Dispute Notice shall be arbitrated and finally resolved, with no right of appeal, even on questions of law, pursuant to the National Arbitration Rules of the ADR Institute of Canada, Inc. The place of arbitration shall be Toronto, Ontario, Canada. The language of the arbitration shall be English.</p></li>
+<li><p>Notwithstanding anything contained in the Agreement to the contrary, either party shall be entitled to seek injunctive or other equitable relief from a court of competent jurisdiction whenever the facts or circumstances would permit a party to seek such relief.</p></li>
+</ol>
+<h2><em>Relationship.</em> The relationship between the Dispensary and Poof will at all times be one of independent contractor and nothing herein shall be construed as implying an employment, partnership, or joint venture relationship. Nothing herein shall be construed as empowering either party to act as a representative or agent of the other party. Neither party shall have the authority to enter into any contract, nor to assume any liability, on behalf of the other party, nor to bind or commit the other party in any manner, except as expressly provided in this Agreement.</h2>
+<h2><em>Force Majeure.</em> Except as expressly provided otherwise in this Agreement, dates and times by which the Dispensary or Poof is required to perform under this Agreement (except for any payment obligation) will be postponed automatically to the extent and for the period of time that the Dispensary or Poof, as the case may be, is prevented by causes outside of its reasonable control from meeting such dates and times by reason of any cause beyond its reasonable control (provided that a lack of financial resources shall not constitute an event beyond the reasonable control of a party). The following events are deemed to be outside of a party’s reasonable control: acts of God, acts of government, acts of war, civil or military unrest, acts of public enemies, epidemics, pandemics, riots, fire, unavailability of communications or electrical power service provided by third parties, governmental regulations superimposed after the fact and earthquakes, explosions, floods or other disasters provided that such causes could not have been reasonably foreseen and the risk and/or consequences of such causes mitigated on a commercially reasonable basis. The parties agree that an event shall not be considered to beyond reasonable control if a reasonable businessperson applying due diligence in the same or similar circumstances under the same or similar obligations as the provisions of the Poof Dispensary Agreement or a Schedule would have put in place contingency plans to either materially mitigate or negate the effects of such event. A party seeking to rely on this Section must (i) notify the other party immediately and in detail of the anticipated or actual commencement of and the cause of postponement; (ii) notify the other party promptly of any material changes in the circumstances which resulted in the postponement including when the reason for the postponement is at an end; and (iii) use diligent efforts to avoid or remove such cause of non-performance and to minimize the consequences thereof, including utilizing all resources reasonably required in the circumstances including without limitation obtaining supplies or services from other resources if they are reasonably available. </h2>
+<h2><em>Non-Solicitation.</em> During the Term and for a period of one (1) year following termination of this Agreement for any reason, neither party may, directly or indirectly, (a) solicit for employment any employee or independent contractor of the other party who was materially involved in the performance of this Agreement; or (b) induce or attempt to induce any employee or independent contractor of the other party who was materially involved in the performance of this Agreement to leave his or her employ or contract, as applicable, with such other party. The foregoing will not prevent either party from hiring any employee or independent contractor who responds to a job posting or advertisement that is not specifically targeted at such employee or independent contractor. </h2>
+<h2><em>Currency.</em> Unless otherwise specified in the Poof Dispensary Agreement, all references to amounts of money in this Agreement refer to Canadian (CAD) currency.</h2>
+<h2><em>Notices.</em> Notices that we give to you (other than notice of amendment of this Agreement), may be provided in any of the following ways. First, we may email the Administrator(s) at the contact information provided in the Poof Dispensary Agreement or any registration data on the Dispensary Account. Second, we may post a notice on the Dispensary Account. It is your responsibility to periodically review your Dispensary Account for notices. The Dispensary may provide notice to Poof by (a) submitting a ticket through the helpdesk; or (b) e-mailing Poof at contact@poof.ca.</h2>
+<h2><em>Successors and Assigns.</em> This Agreement shall enure to the benefit of, and be binding on, the parties and their respective successors and permitted assigns. Poof may assign this Agreement, in its sole discretion. </h2>
+<h2><em>Severability.</em> Any provision of this Agreement, which is prohibited or unenforceable in any jurisdiction will, as to that jurisdiction, be ineffective to the extent of such prohibition or unenforceability and will be severed from the balance of this Agreement, all without affecting the remaining provisions of this Agreement or affecting the validity or enforceability of such provision in any other jurisdiction.</h2>
+<h2>The Parties acknowledge and confirm that the business of each of the Parties is and will be subject to extensive regulation and Applicable Laws. If, at any time during the Term or any Renewal Term, there is any change in Applicable Laws with which a Party is required to comply, and, as a result of such compliance, such Party is no longer able to comply with one or more provisions of this Agreement (each such change, a "Change of Law"), the Parties agree to use their commercially reasonable efforts within a reasonable time frame to agree on amendments to this Agreement necessary and appropriate to take account of the Change of Law, ensuring that the contractual arrangements remain beneficial to both Parties, so that this Agreement may continue in force (a "Change of Law Amendment") for the duration of this Agreement.<br />
+</h2>
+<h2>The Parties have attempted to structure their relationship pursuant to this Agreement in compliance with all Applicable Law. The Parties will cooperate to amend this Agreement to ensure compliance with such applicable laws and regulations, to the extent required to comply with such legislation. In particular, in the event that a regulator advises the Parties that any provision or part thereof of this Agreement fails to comply with any such laws or regulations, such Provision or part thereof shall be null and void and the Parties shall use commercially reasonable efforts to amend the terms of this Agreement such that it complies with all applicable legislation while preserving the intent of the Parties as contemplated herein and such that the contractual arrangements remain beneficial to both Parties. In the event that the regulator advises that the Agreement as a whole does not comply with applicable laws and regulations, this Agreement shall be terminated and of no further force or effect except for the provisions that are intended to survive the termination of this Agreement.</h2>
+<h2><em>Entire Agreement.</em> This Agreement constitutes the entire agreement between the parties with respect to the subject matter of this Agreement and supersedes all previous negotiations, proposals, commitments, writings and understandings of any nature whatsoever.</h2>
+<h2><em>Waiver.</em> No term or provision of this Agreement is deemed waived and no breach excused, unless the waiver or consent is in writing and signed by the party claiming to have waived or consented. Any consent by any party to, or waiver of, a breach by the other, whether expressed or implied, does not constitute a consent to, waiver of, or excuse for, any other different or subsequent breach.</h2>
+<h2><em>Fully Negotiated Agreement.</em> The Dispensary and Poof acknowledge and agree that all of the provisions of this Agreement have been fully negotiated, that neither of them shall be deemed the drafter of this Agreement and that, in construing this Agreement in case of any claim that any provision hereof may be ambiguous, no such provision shall be construed in favour of one party on the ground that such provision was drafted by the other party.</h2>
+<h2><em>Language.</em> The parties have required that this Agreement and all deeds, documents and notices relating to this Agreement be drawn up in the English language. Les parties aux présentes ont exigé que le présent contrat et tous autres contrats, documents ou avis afférents aux présentes soient rédigés en langue anglaise.</h2>
+<h2><em>Modification of Terms.</em> Poof may modify this Agreement at any time by (a) posting a notice on the Dispensary Account or on Poof Marketplace; or (b) by e-mailing the Administrator(s) of the Dispensary, upon providing seven (7) days’ notice to the Dispensary. Poof will also update the “Last Updated” date at the top of the Agreement posted on Poof Marketplace. The Dispensary is responsible for checking the Agreement whenever they access or use Poof Marketplace and/or the Services. By continuing to access or use the Services, the Dispensary represents that the Dispensary agrees to be bound by the modified terms. If the modified terms are not acceptable to the Dispensary, the Dispensary must promptly notify Poof and stop accessing and using the Services.</h2>
+<h2><em>Questions</em>. If you have any questions regarding these Terms or your use of the Services, please contact us here: </h2>
+
+<p><strong>Poof Technologies Inc.</strong></p>
+<p>contact@poof.ca</p>
+    </section>
+
+    <section class="doc" id="schedule-b">
+      <div class="doc-head">
+        <div class="tag">Schedule B</div>
+        <h2>Payments, Cancellation and Refund Policy</h2>
+        <p>How the Service Fee is billed, and how cancellations and refunds work.</p>
+      </div>
+      <p><strong>POOF TECHNOLOGIES INC.</strong></p>
+<p><strong>PAYMENTS, CANCELLATION, AND REFUND POLICY</strong></p>
+<p><strong>FOR DISPENSARIES</strong></p>
+<p>We encourage you to read and understand this payments, cancellation, and refund policy (“<strong>Payments, Cancellation, and Refund Policy</strong>” or this “<strong>Policy</strong>”). A copy of the Terms, which this Policy intends to supplement, will be available through the Poof Marketplace and on <a href="https://poof.ca">https://poof.ca</a> (the “<strong>Site</strong>”).</p>
+<p>By accepting the Terms and/or this Policy or by accessing the Services, you represent that you have read and agreed to the terms of this Policy, as it may be amended from time to time. This Policy is incorporated into and subject to our Terms.</p>
+<p>All capitalized terms that are not otherwise defined herein obtain their meaning from the Terms. If you do not agree with this Policy or any other provision in the Terms, you may not use the Services.</p>
+<p><strong>1. Payments</strong></p>
+<p>Upon the execution of the Poof Dispensary Agreement or any Schedule that provides for the delivery of Services by Poof, the Dispensary shall obtain and maintain access to the Equipment, as defined in the Terms, and complete the integration with the required payments processor, selected at Poof’s sole discretion, as it may be listed in the Poof Dispensary Agreement or a Schedule, or the Site. The Dispensary acknowledges that the Dispensary shall be paid by Customers directly per Order, including any charges, taxes, and fees for Delivery Services, as agreed upon in the Dispensary Agreement and/or a Schedule.</p>
+<p><strong>2. Cancellations and Refunds</strong></p>
+<ol type="1">
+<li><p><em>Refunds and Re-Orders.</em> Subject to anything to the contrary in the Poof Dispensary Agreement, the Poof End-User License Agreement, or a Schedule, cancellations, refunds and re-orders will be addressed as follows:</p></li>
+</ol>
+<ol type="a">
+<li><p><em>Dispensary Order Refunds</em>. In the event that Customers file a complaint about the quality or delivery of an Order, and/or request a cancellation or refund arising from such complaints, Poof will direct such claims to be processed by the applicable Dispensary pursuant to such Dispensary’s terms and conditions. The Dispensary acknowledges that Poof is not obliged to address, but may forward, such complaints or claims to the Dispensary, and the Dispensary further represents that the Dispensary is solely responsible for assessing, addressing, and resolving disputes or claims pertaining to the accuracy, quality, and delivery of the Cannabis products sold to such Customer pursuant to an Order.</p></li>
+<li><p><em>Dispensary Discretionary Refunds.</em> If the Dispensary elects to refund a Customer for any reason, such election shall not obligate Poof to provide a corresponding reimbursement to the Dispensary. In no event shall Poof be obligated to issue any refunds directly to Customers or any other persons.</p></li>
+<li><p><em>Dispute Resolution.</em> The Dispensary shall be solely responsible for any Customer complaints regarding the Dispensary’s products, including Cannabis products, including without limitation, complaints regarding the nature, quality, safety, content, number, or packaging of the Dispensary’s products, including Cannabis. The Dispensary agrees that Poof may retain third-party subcontractors to facilitate with dispute resolution regarding refunds for any disagreement arising between the Dispensary and Customers. The Dispensary agrees to cooperate fully with any third-party subcontracts retained by Poof for dispute resolution purposes. The Dispensary remains fully responsible for Customer complaints that Poof receives and resolves.</p></li>
+</ol>
+<p><strong>3. Modification of this Policy.</strong></p>
+<p>2.1. Poof may modify this Policy at any time by (a) posting a notice on the Dispensary Account or on Poof Marketplace; or (b) by e-mailing the Administrator(s) of the Dispensary, upon providing seven (7) days’ notice to the Dispensary. Poof will also update the “Last Updated” date at the top of this Policy posted on the Site. The Dispensary, including its Administrator(s) and User(s), is responsible for reviewing the updated Policy whenever they access or use Poof Marketplace and/or the Services. By continuing to access or use the Services, the Dispensary represents that the Dispensary agrees to be bound by the modified terms of this Policy. If the modified terms are not acceptable to the Dispensary, the Dispensary must promptly notify Poof and stop accessing and using the Services.</p>
+<p><em><strong>4. Service Fee.</strong></em> The Service Fee is a recurring monthly subscription fee payable in respect of each Integrated Location, as set out in the Poof Dispensary Agreement and the Order Form. Poof charges no commission, revenue share, or percentage of the Dispensary’s Revenue on any Order. The Service Fee is billed monthly in advance to the payment method held on file, is exclusive of applicable taxes, and first becomes payable on the Billing Start Date. No amount is charged on registration.</p>
+<p><em><strong>5. Cancellation.</strong></em> The Dispensary may cancel on thirty (30) days’ written notice in accordance with Section 2.1 of the Poof Dispensary Agreement. Service Fees already accrued remain payable. On cancellation Poof will remove the Dispensary’s Integrated Locations from the Poof Retail Network; the Dispensary’s Marketplace Listing remains available at no cost.</p>
+<p><em><strong>6. Refunds of Service Fees.</strong></em> Service Fees are billed in advance and are non-refundable except where required by Applicable Law or where Poof has charged in error, in which case Poof will refund the amount charged in error to the original payment method.</p>
+<p><strong>3. Questions and Comments</strong></p>
+<p>If you have any questions regarding these Terms or your use of the Services, the Poof Marketplace, please contact us here:</p>
+<p>Poof Technologies Inc.</p>
+<p>contact@poof.ca</p>
+    </section>
+
+    <section class="doc" id="schedule-d">
+      <div class="doc-head">
+        <div class="tag">Schedule D</div>
+        <h2>Support and Service Level Agreement</h2>
+        <p>Support channels, response targets and availability commitments.</p>
+      </div>
+      <h2>SCHEDULE “D” – SUPPORT AND SERVICE LEVEL AGREEMENT</h2>
+
+<p><strong>THIS SCHEDULE</strong> “<strong>D” – SUPPORT AND SERVICE LEVEL AGREEMENT</strong> (“<strong>Schedule</strong>”) forms a part of the Dispensary Agreement effective as of the Effective Date (as defined in the Agreement) between Poof Technologies Inc. (“<strong>Poof</strong>”) and <mark>[</mark> ] (“<strong>Dispensary</strong>”), as amended from time to time (the “<strong>Agreement</strong>”), and Poof Terms and Conditions attached as Schedule “A” to the Agreement (“<strong>Terms</strong>”). Capitalized terms not defined herein have the meaning ascribed to them in the Agreement and/or the Terms.</p>
+
+<h1>SUPPORT</h1>
+<h2><em>Support Obligations</em>. Beginning on the Effective Date and continuing throughout the Term (as defined in the Agreement), Poof will provide support relating to the Poof Marketplace and/or access to the Services to the Dispensary, its Administrator(s), and Users, in accordance with this Schedule (each request for support, a “Request”). </h2>
+<h2><em>Helpdesk Support.</em> The Dispensary and Users may submit Requests through the dedicated service portal available on Poof’s website or by calling Poof’s helpdesk phone number or by emailing Poof at <mark>support@poof.ca</mark></h2>
+<h2><em>Support Hours</em>. Subject to the response timetable below, support pertaining to the Poof Marketplace and/or access to the Services will be available between the hours of 9 am EST and 4:30 pm EST on each Business Day (each such hour is hereafter referred to as a “Business Hour”). After hours support (“After Hours”) is available from 4:30 pm EST to 9:00 pm EST on each Business day and from 9 am EST to 5:00 pm EST on weekends. </h2>
+<h2><em>Updates to Poof Marketplace.</em> During the Term, Poof will supply the Dispensary, at no extra charge, any improvements or non-material modifications to the Poof Marketplace that Poof generally makes available as a minor release and any essential updates, enhances and fixed (“Updates”). Additional Services can be purchased from Poof at an additional cost, pursuant to a Schedule. </h2>
+<h2><em>Limitations on Support</em>. Poof’s obligation to provide support is contingent upon proper use of the Poof Marketplace and the Equipment, including in accordance with applicable law, and full compliance with the Agreement. Moreover, Poof shall be under no obligation to provide maintenance and support should the maintenance and/or support be required due (i) to failure to operate the Poof Marketplace or the Equipment within any recommended system requirements as instructed by Poof or third party providers; (ii) any modification or attempted modification of the Poof Marketplace or the Equipment by the Dispensary or any third party; or (iii) the Dispensary’s failure to implement software changes or upgrades recommended by Poof.</h2>
+
+<h1>SUPPORT ISSUE SEVERITY LEVELS, RESPONSE TIMES, ISSUE RESOLUTION, AND ESCALATION</h1>
+<h2><em>Issue Response</em>. Poof endeavours to respond to Requests as follows within the following non-binding service standards:</h2>
+<table>
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 31%" />
+<col style="width: 45%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><strong>SEVERITY LEVEL</strong></td>
+<td colspan="2"><strong>RESPONSE COMMITMENT TIMETABLE</strong></td>
+</tr>
+<tr class="even">
+<td></td>
+<td><strong>Initial Response</strong></td>
+<td><strong>On-going Communication on Problem Resolution</strong></td>
+</tr>
+<tr class="odd">
+<td>Causes severe impact to the Dispensary’s access to the Services and/or the Poof Marketplace</td>
+<td><p><mark>One (1) Business Hour</mark> during Business Days</p>
+<p><mark>Two (2) Hours</mark> during After Hours</p></td>
+<td>Poof will make reasonable efforts to resolve the problem or provide a workaround within <mark>three (3) Hours</mark> while keeping the Dispensary updated at least <mark>every one (1) Hour</mark> until closure of the support incident.</td>
+</tr>
+<tr class="even">
+<td>Causes little to no impact to the Dispensary’s access to the Services and/or the Poof Marketplace</td>
+<td><p><mark>Two (2) Business Hours</mark> during Business Days.</p>
+<p><mark>Four (4) Hours</mark> during After Hours.</p></td>
+<td>Poof will make reasonable efforts to resolve the problem or provide a workaround while keeping the Dispensary updated at least every <mark>one (1) Business Days</mark> until closure of the support incident.</td>
+</tr>
+</tbody>
+</table>
+<h2><em>Escalation</em>. Support issues may be escalated by Dispensary as follows. </h2>
+<ol type="a">
+<li>
+<p><strong>Severity Escalation</strong>: The Dispensary may escalate the severity of a Request by notifying Poof’s support resources, if there are extenuating circumstances that cause or could cause the support issue to have an adverse impact on Dispensary’s business. The request to escalate the severity of a support issue may be initiated by submitting or updating an e-mail with the word “escalate” in the subject line.</p>
+</li>
+<li>
+<p><strong>Managerial Escalation</strong>: The Dispensary may request managerial escalation of a Request by contacting Poof’s applicable contact persons or Account Manager. Issues may be escalated through subsequent levels of management as required until the support issue is resolved.</p>
+</li>
+</ol>
+<h1>UPTIME AND DOWNTIME</h1>
+<h2><em>Uptime</em>. “Uptime” means the aggregate percentage of hours <mark>in a calendar month</mark> during which Services are actually available for use by the Dispensary and its Users and reasonably operational and usable. “Downtime” is the amount of time during which Services are unavailable. Uptime=100% - (Downtime divided by the total number of hours in the relevant month, expressed as a percentage). If the Uptime during the Initial Term or any Renewal Terms is less than 99.8%, Poof shall provide credits to the Dispensary as set out herein, against the Fees charged (“Credits”). </h2>
+<table>
+<colgroup>
+<col style="width: 48%" />
+<col style="width: 51%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><strong><u>Uptime</u></strong></th>
+<th><strong>Rebate/Credit</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong><mark>99.80% or Greater Uptime</mark></strong></td>
+<td><strong>No Credits Provided</strong></td>
+</tr>
+<tr class="even">
+<td><strong><mark>99.79% to 97.00% Uptime</mark></strong></td>
+<td><strong>Rebate equal to <mark>10%</mark> off <mark>Fee</mark></strong></td>
+</tr>
+<tr class="odd">
+<td><strong><mark>96.99% or Less Uptime</mark></strong></td>
+<td><strong>Rebate equal to <mark>25%</mark> off <mark>Fee</mark></strong></td>
+</tr>
+</tbody>
+</table>
+<h2><em>Sole Remedy</em>. In the event that the Dispensary is dissatisfied with the Uptime, the Dispensary’s sole remedies are those listed in this Schedule or termination in accordance with the Agreement. </h2>
+<h2><em>Planned Service Interruptions.</em> Notwithstanding the service level agreement contained in this Schedule, Poof may, upon reasonable notice, interrupt the availability of Services between <mark>11:00 P.M. and 6:00 AM</mark>, Toronto, Ontario time, to perform planned maintenance on the Poof Marketplace (“Planned Service Interruption”).</h2>
+<h2><em>Exigent Circumstances.</em> Poof may also interrupt the availability of the Services on an exigent basis, as minimally required to repair and/or mitigate the effects of security breaches, virus attacks, denial of service attacks and other intentional interferences by third parties. Poof will exercise reasonable efforts to inform the Dispensary before interrupting the availability of the Services to effect the said repairs.</h2>
+<h2><em>Reporting Downtime.</em> The Dispensary must report any Downtime to Poof through Poof’s support email (<mark>support@poof.ca</mark>). The Dispensary or its Users must provide the necessary information and co-operation required by Poof to enable Poof to determine the cause of the problems. A support ticket should be opened in each such case and Poof will subsequently investigate the reported Downtime.</h2>
+<h2><em>Exceptions</em>. Poof shall not be responsible for any Downtime to the extent that such Downtime is the direct, normal and reasonable result from any of the following:</h2>
+<ol type="a">
+<li><p>The Services or the Poof Marketplace being modified or altered in any way by the Dispensary;</p></li>
+<li><p>Incomplete, inaccurate information provided by the Dispensary to Poof;</p></li>
+<li><p>Any delay or failure in complying with any of the Dispensary’s obligations under the Agreement;</p></li>
+<li><p>Time taken during Planned Service Interruptions (to a maximum of <mark>2 hours per month</mark>), as provided above;</p></li>
+<li><p>Regulatory events; or</p></li>
+<li><p>Any Force Majeure under the Agreement, other than unavailability of communications or electrical service provided by a third party.</p></li>
+</ol>
+    </section>
+
+    <section class="doc" id="schedule-e">
+      <div class="doc-head">
+        <div class="tag">Schedule E</div>
+        <h2>Additional Terms for White-Labelling Services</h2>
+        <p>Applies only if Poof provides white-labelled e-commerce services to you.</p>
+      </div>
+      <p><strong>SCHEDULE “E”</strong></p>
+<p><strong>ADDITIONAL TERMS FOR WHITE-LABELLING SERVICES</strong></p>
+<p><strong>THIS SCHEDULE “E”</strong> – ADDITIONAL TERMS FOR WHITE-LABELLING SERVICES (“<strong>Schedule</strong>”) forms a part of the Dispensary Agreement effective as of the Effective Date (as defined in the Agreement) between Poof Technologies Inc. (“<strong>Poof</strong>”) and the Dispensary, as amended from time to time (the “<strong>Agreement</strong>”), and the Poof Terms and Conditions attached as Schedule “A” to the Agreement (“<strong>Terms</strong>”). Capitalized terms not defined herein have the meaning ascribed to them in the Agreement and/or the Terms.</p>
+<p><strong>1. <em>Availability. </em></strong>White-Labelling Services are not currently offered by Poof and no White-Labelling Services are provided under the Agreement as at the Effective Date. Section 4 of the Agreement is to be read accordingly. Poof may introduce White-Labelling Services at any time by notice to the Dispensary, at which point the terms of this Schedule apply.</p>
+<p><strong>2. <em>Scope. </em></strong>Where Poof agrees to provide White-Labelling Services, Poof will provide the Dispensary with a white-labelled e-commerce website, mobile application, website menu or mobile menu (each a “Site”) operating on the Dispensary’s existing or custom domain, as agreed between the parties. The scope of any such engagement will be recorded in an Order Form or an amendment to the Agreement.</p>
+<p><strong>3. <em>Fees. </em></strong>White-Labelling Services are chargeable. The applicable fees will be set out in an Order Form or an amendment to the Agreement before any White-Labelling Services are provided, and are payable in addition to the Service Fee. Where Poof has not introduced a fee for a particular Site service, that service is provided at no cost until Poof introduces a fee in accordance with Section 6.6 of the Agreement.</p>
+<p><strong>4. <em>Setup and Training. </em></strong>Poof will schedule a call with the Dispensary’s authorized representative to set up the Site, and following setup will conduct a training session of approximately fifteen (15) to thirty (30) minutes with that representative covering admin controls and functionality.</p>
+<p><strong>5. <em>Dispensary Content and Responsibilities. </em></strong>The Dispensary is solely responsible for the accuracy and legality of all content, product information, pricing and imagery it supplies for display on a Site, and for ensuring that each Site complies with Applicable Law, including all cannabis advertising, promotion and age-gating requirements. The Dispensary grants Poof a non-exclusive, royalty-free licence to use its trade-marks, trade names and brand assets solely for the purpose of operating the Site during the Term.</p>
+<p><strong>6. <em>Intellectual Property. </em></strong>Poof retains all Intellectual Property Rights in the underlying platform, templates, code and design system used to deliver any Site. The Dispensary retains all rights in its own content, trade-marks and Dispensary Data. Nothing in this Schedule transfers ownership of the platform to the Dispensary.</p>
+<p><strong>7. <em>Domains and Hosting. </em></strong>Unless otherwise agreed, the Dispensary is responsible for procuring and maintaining its own domain registration. Poof will host each Site with its Cloud Providers in accordance with Section 4 of the Terms.</p>
+<p><strong>8. <em>Term and Effect of Termination. </em></strong>This Schedule takes effect when White-Labelling Services are first provided and continues for the Term of the Agreement. On expiry or termination of the Agreement, or on discontinuation of the White-Labelling Services, Poof will cease hosting each Site and will, on written request made within thirty (30) days, provide the Dispensary with an export of its Dispensary Data and content from the Site.</p>
+<p><strong>9. <em>Conflict. </em></strong>In the event of a conflict between this Schedule and the Agreement or the Terms, the provisions of this Schedule govern in respect of the White-Labelling Services only.</p>
+    </section>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="foot-in">
+    <span>© 2026 Poof Technologies Inc. · 100 King Street West, Suite 5600, Toronto, ON M5X 1C9</span>
+    <span>Questions: <a href="mailto:contact@poof.ca">contact@poof.ca</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
