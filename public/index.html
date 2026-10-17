@@ -1,2265 +1,714 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-CA">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Join the Poof Retail Network</title>
-<meta name="description" content="Tell us your store name. We'll fill in the rest.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<title>Get your store on Poof</title>
+<meta name="description" content="Turn on the Poof Retail Ad Network for your Ontario dispensary. Takes about two minutes.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%23ff3d8b'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://js.stripe.com/v3/"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  /* ── Sampled from the business.poof.ca light-mode screenshot.
-        Font is an approximation: Outfit is the closest match I could identify.
-        Replace --body/--display if the site loads something else. ── */
-  --base:#F6F6F8;            /* page */
-  --surface:#FFFFFF;         /* cards */
-  --surface-2:#F1F1F5;       /* inset panels, poof bubbles */
-  --line:#E8E8EE;
-
-  --magenta:#FF428A;         /* brand pink — fills */
-  --magenta-hover:#F02F7A;
-  --on-accent:#FCFCFC;       /* white on pink, matching the site's buttons */
-  --magenta-text:#C4126A;    /* pink as text on light: 5.8:1 */
-
-  --violet:#B77EFC;
-  --violet-text:#7A34F0;
-  --blue:#489CFC;
-  --blue-text:#1668C7;
-  --verified:#0E7A50;        /* green as text */
-  --verified-fill:#67C8A4;
-  --warn-text:#9A5B00;
-  --danger-text:#C0134E;
-
-  --ink:#0F0F12;             /* headlines, dark pill */
-  --muted:#44444C;           /* body copy */
-  --dim:#74747C;             /* captions, small caps */
-
-  --wash-pink:#F7E2EC;
-  --wash-lilac:#EDE8F9;
-
-  --display:'Outfit',system-ui,sans-serif;
-  --body:'Outfit',system-ui,sans-serif;
-  --mono:ui-monospace,'SF Mono',Menlo,monospace;
-
-  --r-sm:10px; --r-md:14px; --r-lg:20px; --r-pill:999px;
-  --ease:cubic-bezier(.22,1,.36,1);
+  --pink:#ff3d8b; --pink-soft:#ffe3ee; --pink-ink:#c2185b;
+  --ink:#08080a; --text:#1c1c21; --muted:#6b6b76; --faint:#9a9aa5;
+  --line:#e8e8ee; --card:#ffffff; --bg:#fbf7f9; --bubble:#f3f2f6; --ok:#17b56b;
+  --r:16px; --font:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,sans-serif;
 }
-
 *{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{
-  background:var(--base);
-  color:var(--ink);
-  font-family:var(--body);
-  font-size:16px;
-  line-height:1.55;
-  -webkit-font-smoothing:antialiased;
-  min-height:100vh;
-}
-
-/* Ambient wash — one soft magenta bloom behind the thread, nothing more. */
-body::before{
-  content:'';
-  position:fixed; inset:0;
-  background:
-    linear-gradient(180deg, rgba(246,246,248,0) 42%, var(--base) 78%),
-    linear-gradient(100deg, var(--wash-pink) 0%, #F7E8F0 40%, #F2EDF5 66%, var(--wash-lilac) 100%);
-  height:520px; bottom:auto;
-  pointer-events:none; z-index:0;
-}
-
-.shell{
-  position:relative; z-index:1;
-  max-width:1180px;
-  margin:0 auto;
-  padding:28px 20px 64px;
-  display:grid;
-  grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);
-  gap:36px;
-  align-items:start;
-}
-
-/* ---------- masthead ---------- */
-.masthead{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px}
-.wordmark{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:-.03em;color:var(--ink)}
-.wordmark span{color:var(--magenta)}
-.masthead-note{font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
-
-/* ---------- chat thread ---------- */
-.thread{
-  background:var(--surface);
-  border:1px solid var(--line);
-  box-shadow:0 1px 2px rgba(15,15,18,.03), 0 12px 32px rgba(15,15,18,.05);
-  border-radius:var(--r-lg);
-  padding:26px 24px 20px;
-  min-height:60vh;
-  display:flex; flex-direction:column; gap:18px;
-}
-
-.msg{max-width:86%;animation:rise .42s var(--ease) both}
-.msg-poof{align-self:flex-start}
-.msg-them{align-self:flex-end;text-align:right}
-
-.bubble{
-  display:inline-block;
-  padding:13px 17px;
-  border-radius:var(--r-md);
-  font-size:15.5px;
-}
-.msg-poof .bubble{background:var(--surface-2);border:1px solid transparent;border-bottom-left-radius:4px}
-.msg-them .bubble{background:var(--magenta);color:var(--on-accent);font-weight:500;border-bottom-right-radius:4px}
-.bubble strong{font-weight:600}
-
-.msg-poof .bubble.lead{
-  font-family:var(--display);
-  font-size:27px;
-  line-height:1.18;
-  letter-spacing:-.03em;
-  font-weight:700;
-  background:none;border:none;padding:0;
-}
-
-.typing{display:inline-flex;gap:5px;padding:15px 17px;background:var(--surface-2);border:1px solid transparent;border-radius:var(--r-md);border-bottom-left-radius:4px}
-.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1.3s infinite}
-.typing i:nth-child(2){animation-delay:.18s}
-.typing i:nth-child(3){animation-delay:.36s}
-
-/* ---------- controls inside the thread ---------- */
-.controls{align-self:stretch;animation:rise .42s var(--ease) both}
-.control-label{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
-
-.field{position:relative}
-.field input,.field textarea{
-  width:100%;
-  background:var(--surface);
-  border:1px solid #D6D6DE;
-  border-radius:var(--r-md);
-  color:var(--ink);
-  font-family:var(--body);
-  font-size:16px;
-  padding:14px 16px;
-  transition:border-color .2s,box-shadow .2s;
-}
-.field input:focus,.field textarea:focus{
-  outline:none;
-  border-color:var(--magenta);
-  box-shadow:0 0 0 3px rgba(255,61,139,.20);
-}
-.field input::placeholder{color:var(--dim)}
-.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
-.btn{
-  font-family:var(--body);font-size:16px;font-weight:600;
-  padding:14px 26px;border-radius:var(--r-pill);border:1px solid transparent;
-  cursor:pointer;transition:transform .16s var(--ease),background .18s,border-color .18s;
-}
-.btn:focus-visible{outline:2px solid var(--magenta);outline-offset:3px}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn-primary{background:var(--magenta);color:var(--on-accent);box-shadow:0 6px 20px rgba(255,66,138,.30)}
-.btn-primary:hover:not(:disabled){transform:translateY(-1px);background:var(--magenta-hover)}
-.btn-ghost{background:var(--surface);color:var(--ink);border-color:var(--line)}
-.btn-ghost:hover{border-color:var(--dim)}
-.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-
-.btn-lg{font-size:17px;padding:16px 34px}
-
-/* typeahead */
-.suggest{
-  margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md);
-  background:var(--surface);overflow:hidden;max-height:280px;overflow-y:auto;
-}
-.suggest:empty{display:none}
-.suggest-empty{padding:14px 15px;font-size:13.5px;color:var(--dim)}
-.suggest-item{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);
-  padding:13px 15px;color:var(--ink);font-family:var(--body);font-size:15px;cursor:pointer;
-}
-.suggest-item:last-child{border-bottom:none}
-.suggest-item:hover,.suggest-item:focus-visible{background:var(--surface-2);outline:none}
-.suggest-meta{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap}
-.suggest-hint{display:block;font-family:var(--mono);font-size:10.5px;color:var(--magenta-text);margin-top:3px}
-
-/* option chips */
-.options{display:flex;flex-direction:column;gap:10px}
-.option{
-  display:flex;gap:13px;align-items:flex-start;
-  padding:15px 16px;border:1px solid var(--line);border-radius:var(--r-md);
-  background:var(--surface);cursor:pointer;text-align:left;width:100%;
-  color:var(--ink);font-family:var(--body);transition:border-color .18s,background .18s;
-}
-.option:hover{border-color:var(--muted)}
-.option:focus-visible{outline:2px solid var(--magenta);outline-offset:2px}
-.option[aria-pressed="true"]{border-color:var(--magenta);background:rgba(255,61,139,.07)}
-.option-mark{
-  flex:0 0 18px;height:18px;margin-top:2px;border:1.5px solid var(--line);border-radius:5px;
-  display:grid;place-items:center;font-size:11px;color:var(--on-accent);
-}
-.option[aria-pressed="true"] .option-mark{background:var(--magenta);border-color:var(--magenta)}
-.option[aria-pressed="true"] .option-mark::after{content:'✓';font-weight:700}
-.option-title{font-weight:600;font-size:15px}
-.option-sub{font-size:13.5px;color:var(--muted);margin-top:2px;line-height:1.45}
-
-/* ---------- store record rail ---------- */
-.rail{position:sticky;top:28px}
-.record{
-  background:var(--surface);
-  border:1px solid var(--line);
-  box-shadow:0 1px 2px rgba(15,15,18,.03), 0 12px 32px rgba(15,15,18,.05);
-  border-radius:var(--r-lg);
-  overflow:hidden;
-}
-.record-head{
-  padding:18px 20px;border-bottom:1px solid var(--line);
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-}
-.record-title{font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
-.record-count{font-family:var(--mono);font-size:11px;color:var(--magenta)}
-.record-body{padding:6px 20px 20px}
-
-.record-empty{padding:34px 4px;color:var(--dim);font-size:14px;line-height:1.6}
-
-.rec{padding:14px 0;border-bottom:1px solid var(--line);animation:stamp .5s var(--ease) both}
-.rec:last-child{border-bottom:none}
-.rec-key{font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:8px}
-.rec-val{font-size:15px;margin-top:5px;word-break:break-word}
-.rec-val.small{font-size:13.5px;color:var(--muted)}
-
-.src{
-  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
-  padding:2px 6px;border-radius:4px;border:1px solid var(--line);color:var(--dim);
-}
-.src[data-s="poof"]{color:var(--magenta-text);border-color:rgba(255,61,139,.5)}
-.src[data-s="agco"]{color:var(--blue-text);border-color:rgba(22,104,199,.32)}
-.src[data-s="google"]{color:var(--violet-text);border-color:rgba(122,52,240,.3)}
-.src[data-s="entered"],.src[data-s="you"]{color:var(--muted);border-color:var(--line)}
-
-.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
-.chip{
-  font-family:var(--mono);font-size:11px;letter-spacing:.04em;
-  padding:5px 9px;border-radius:6px;border:1px solid var(--line);color:var(--muted);
-  display:inline-flex;align-items:center;gap:6px;
-}
-.chip[data-conf="verified"]{color:var(--verified);border-color:rgba(17,128,85,.35);background:rgba(45,195,130,.10)}
-.chip[data-conf="detected"]{color:var(--muted)}
-.chip .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
-
-.hours-prose{color:var(--ink);line-height:1.5}
-
-/* inline single-choice options sit tighter than the descriptive ones */
-.option-inline{align-items:center;padding:12px 15px}
-.option-inline .option-title{font-weight:500}
-.options-scroll{max-height:300px;overflow-y:auto;padding-right:4px}
-
-/* end-of-flow summary */
-.summary{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);overflow:hidden}
-.summary-row{display:grid;grid-template-columns:150px 1fr;gap:14px;padding:11px 16px;border-bottom:1px solid var(--line)}
-.summary-row:last-child{border-bottom:none}
-.summary-key{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding-top:3px}
-.summary-val{font-size:14.5px;line-height:1.5}
-@media (max-width:560px){
-  .summary-row{grid-template-columns:1fr;gap:3px}
-  .summary-key{padding-top:0}
-}
-
-.rec-foot{margin:16px 0 0;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--dim);line-height:1.5}
-
-.rec-edit{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-.rec-edit-label{font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
-.rec-edit-btns{display:flex;flex-wrap:wrap;gap:6px}
-.rec-edit-btn{
-  font-family:var(--body);font-size:12.5px;font-weight:500;
-  padding:6px 12px;border-radius:var(--r-pill);
-  border:1px solid var(--line);background:var(--surface);color:var(--muted);
-  cursor:pointer;transition:border-color .16s,color .16s;
-}
-.rec-edit-btn:hover{border-color:var(--magenta);color:var(--magenta-text)}
-.rec-edit-btn:focus-visible{outline:2px solid var(--magenta);outline-offset:2px}
-
-.loc{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
-.loc:last-child{border-bottom:none}
-.loc-name{font-size:14px}
-.loc-addr{font-size:12.5px;color:var(--dim);margin-top:1px}
-
-.credit-note{
-  margin-top:14px;padding:12px 14px;border-radius:var(--r-sm);
-  background:rgba(45,195,130,.10);border:1px solid rgba(17,128,85,.3);
-  font-size:13.5px;color:var(--verified);line-height:1.5;
-}
-.credit-note b{color:var(--verified)}
-
-.error{
-  margin-top:10px;padding:11px 14px;border-radius:var(--r-sm);
-  background:rgba(255,61,139,.08);border:1px solid rgba(196,18,106,.3);
-  color:var(--danger-text);font-size:14px;
-}
-
-.fineprint{margin-top:14px;font-size:12.5px;color:var(--dim);line-height:1.55}
-
-/* ---------- value beat ---------- */
-.valueprops{display:flex;flex-direction:column;gap:2px;margin-bottom:14px;
-            border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:6px}
-.vp{display:flex;gap:12px;align-items:flex-start;padding:12px 13px}
-.vp-dot{flex:0 0 8px;height:8px;border-radius:50%;margin-top:7px}
-.vp b{display:block;font-size:14.5px;font-weight:600}
-.vp span{display:block;font-size:13.5px;color:var(--muted);line-height:1.5;margin-top:2px}
-
-/* ---------- chipsets (stack + delivery) ---------- */
-.stack-group{margin-bottom:18px}
-.chipset{display:flex;flex-wrap:wrap;gap:8px}
-.chipbtn{
-  font-family:var(--body);font-size:14.5px;font-weight:500;
-  padding:10px 17px;border-radius:var(--r-pill);
-  border:1px solid var(--line);background:var(--surface);color:var(--ink);
-  cursor:pointer;transition:border-color .16s,background .16s,color .16s;
-}
-.chipbtn:hover{border-color:var(--dim)}
-.chipbtn:focus-visible{outline:2px solid var(--magenta);outline-offset:2px}
-.chipbtn.on{background:var(--magenta);border-color:var(--magenta);color:var(--on-accent)}
-.chip-other{margin-top:10px}
-
-/* ---------- progress ---------- */
-#progress{display:flex;align-items:center;gap:12px}
-.prog-label{font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
-.prog-track{display:inline-flex;gap:4px}
-.prog-track i{width:18px;height:4px;border-radius:2px;background:var(--line);display:block}
-.prog-track i.done{background:var(--magenta);opacity:.45}
-.prog-track i.now{background:var(--magenta)}
-@media (max-width:560px){.prog-label{display:none}}
-
-/* ---------- closing timeline ---------- */
-.timeline{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:6px 8px;margin-bottom:14px}
-.tl{display:flex;gap:14px;align-items:flex-start;padding:12px 12px;position:relative}
-.tl::before{content:'';position:absolute;left:17px;top:28px;bottom:-6px;width:1.5px;background:var(--line)}
-.tl:last-child::before{display:none}
-.tl-node{flex:0 0 11px;height:11px;border-radius:50%;margin-top:5px;background:var(--surface-2);
-         border:2px solid var(--line);position:relative;z-index:1}
-.tl.done .tl-node{background:var(--verified-fill);border-color:var(--verified-fill)}
-.tl.next .tl-node{background:var(--magenta);border-color:var(--magenta);
-                  box-shadow:0 0 0 4px rgba(255,66,138,.16)}
-.tl b{display:block;font-size:14.5px;font-weight:600}
-.tl.done b{color:var(--muted)}
-.tl span{display:block;font-size:13px;color:var(--muted);line-height:1.5;margin-top:2px}
-
-/* ---------- terms acceptance ---------- */
-.reassure{background:var(--base);border:1px solid var(--line);border-radius:var(--r-sm);
-          padding:14px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:9px}
-.rz{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.5;color:var(--muted)}
-.rz b{color:var(--ink);font-weight:600}
-.rz-lead{padding-bottom:9px;border-bottom:1px solid var(--line)}
-.rz-lead b{color:var(--verified)}
-.rz-tick{flex:0 0 auto;color:var(--verified);font-weight:700;font-size:12px;margin-top:1px}
-.terms{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:18px 20px}
-.tickrow{display:flex;gap:12px;align-items:flex-start;cursor:pointer;padding:9px 0}
-.tickrow input{position:absolute;opacity:0;width:0;height:0}
-.tickbox{flex:0 0 20px;height:20px;margin-top:1px;border:1.5px solid #C9C9D2;border-radius:6px;
-         background:var(--base);display:grid;place-items:center;transition:background .16s,border-color .16s}
-.tickbox::after{content:'✓';font-size:12px;font-weight:700;color:var(--on-accent);opacity:0;transition:opacity .16s}
-.tickrow input:checked + .tickbox{background:var(--magenta);border-color:var(--magenta)}
-.tickrow input:checked + .tickbox::after{opacity:1}
-.tickrow input:focus-visible + .tickbox{outline:2px solid var(--magenta);outline-offset:2px}
-.ticktext{font-size:14px;line-height:1.55;color:var(--muted)}
-.ticktext strong{color:var(--ink)}
-.ticktext a{color:var(--magenta-text);font-weight:600}
-
-/* ---------- coverage map ---------- */
-.mapwrap{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:20px;
-         background:rgba(15,15,18,.55);backdrop-filter:blur(4px);
-         opacity:0;transition:opacity .26s var(--ease)}
-.mapwrap.in{opacity:1}
-.mapcard{position:relative;width:min(1000px,100%);max-height:94vh;overflow:auto;
-         background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
-         box-shadow:0 24px 70px rgba(15,15,18,.22);padding:30px 30px 22px;
-         transform:translateY(10px);transition:transform .3s var(--ease)}
-.mapwrap.in .mapcard{transform:none}
-.mapclose{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;
-          border:1px solid var(--line);background:var(--base);color:var(--muted);
-          font-size:14px;cursor:pointer;line-height:1;z-index:5}
-.mapclose:hover{color:var(--ink);border-color:var(--dim)}
-
-.maphead h2{margin:0 0 8px;font-family:var(--display);font-size:27px;letter-spacing:-.03em;font-weight:700}
-.maphead p{margin:0 0 18px;color:var(--muted);font-size:15px;line-height:1.6;max-width:660px}
-
-/* headline number + toggle */
-.covbar{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
-        border:1px solid var(--line);border-radius:var(--r-md);background:var(--base);
-        padding:16px 20px;margin-bottom:14px;transition:border-color .25s,background .25s}
-.covbar.on{border-color:rgba(255,66,138,.35);background:rgba(255,66,138,.045)}
-.covstat b{display:block;font-family:var(--display);font-size:34px;font-weight:700;
-           letter-spacing:-.03em;line-height:1.05;color:var(--ink);transition:color .25s}
-.covbar.on .covstat b{color:var(--magenta-text)}
-.covstat span{display:block;font-size:13.5px;color:var(--muted);margin-top:3px}
-
-.toggle{display:inline-flex;align-items:center;gap:11px;cursor:pointer;user-select:none}
-.toggle input{position:absolute;opacity:0;width:0;height:0}
-.toggle .tk{width:46px;height:26px;border-radius:999px;background:var(--line);
-            position:relative;transition:background .22s var(--ease);flex:0 0 46px}
-.toggle .tk i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
-              background:var(--surface);box-shadow:0 1px 3px rgba(15,15,18,.25);
-              transition:transform .22s var(--ease)}
-.toggle input:checked + .tk{background:var(--magenta)}
-.toggle input:checked + .tk i{transform:translateX(20px)}
-.toggle input:focus-visible + .tk{outline:2px solid var(--magenta);outline-offset:3px}
-.toggle .tl{font-size:14.5px;font-weight:600;color:var(--muted)}
-.toggle input:checked ~ .tl{color:var(--ink)}
-
-.mapstage{position:relative;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
-#leaf{height:min(56vh,520px);width:100%;background:#EDEDF2}
-.maploading{position:absolute;inset:0;display:grid;place-items:center;
-            background:var(--surface);color:var(--dim);font-size:14px;z-index:500}
-
-/* Leaflet overrides, so it reads as part of the flow rather than a bolted-on widget */
-.leaflet-container{font-family:var(--body)}
-.leaflet-control-zoom a{border-radius:8px!important;color:var(--muted)!important;
-                        border-color:var(--line)!important}
-.leaflet-control-zoom a:hover{color:var(--ink)!important}
-.leaflet-tooltip{border-radius:8px;border:1px solid var(--line);
-                 box-shadow:0 4px 14px rgba(15,15,18,.14);font-size:12.5px;padding:7px 10px}
-.leaflet-control-attribution{font-size:10px;background:rgba(255,255,255,.78)}
-.cell{animation:cellin .5s var(--ease) both}
-@keyframes cellin{from{opacity:0}to{opacity:1}}
-
-.mapfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px 22px;padding-top:14px;
-         border-top:1px solid var(--line);margin-top:14px;font-size:12.5px;color:var(--dim)}
-.lg{display:inline-flex;align-items:center;gap:7px}
-.lg i{width:10px;height:10px;border-radius:50%;display:block}
-.lg-you{background:var(--magenta);box-shadow:0 0 0 2.5px #fff, 0 0 0 3.5px var(--magenta)}
-.lg-cell{background:rgba(255,66,138,.18);border:1.5px dashed var(--magenta)}
-.lg-note{margin-left:auto;font-style:italic}
-
-@media (max-width:720px){
-  .mapcard{padding:22px 16px 16px}
-  .maphead h2{font-size:22px}
-  .covbar{padding:14px 16px}
-  .covstat b{font-size:27px}
-  .lg-note{margin-left:0;width:100%}
-}
-@media (prefers-reduced-motion:reduce){.cell{animation:none}}
-
-/* ---------- animations ---------- */
-@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@keyframes stamp{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
-@keyframes blink{0%,60%,100%{opacity:.3}30%{opacity:1}}
-
-@media (prefers-reduced-motion:reduce){
-  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
-}
-
-
-/* embedded Stripe */
-.quote{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:16px 18px;margin-bottom:12px}
-.qline{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:5px 0;color:var(--muted)}
-.qline span:last-child{font-family:var(--mono);font-size:13px}
-.qline-credit{color:var(--verified)}
-.qline-total{margin-top:8px;padding-top:11px;border-top:1px solid var(--line);color:var(--ink);font-weight:600;font-size:16px}
-.qline-total span:last-child{font-size:16px;color:var(--verified)}
-.qline-note{font-size:12.5px;color:var(--dim)}
-.stripe-mount{border:1px solid var(--line);border-radius:var(--r-md);background:#fff;padding:4px;min-height:320px}
-
-/* ---------- mobile ---------- */
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{background:linear-gradient(180deg,#fde8f0 0%,#fbf7f9 320px)}
+a{color:var(--pink-ink)} button{font:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 16px 60px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.logo{font-weight:800;font-size:24px;color:var(--ink);letter-spacing:-.02em;text-decoration:none}
+.logo b{color:var(--pink)}
+.progress{display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.progress .bar{width:120px;height:3px;background:#ecd9e1;border-radius:3px;overflow:hidden}
+.progress .bar i{display:block;height:100%;background:var(--pink);width:0;transition:width .4s}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:22px;align-items:start}
+.chat{background:var(--card);border-radius:var(--r);box-shadow:0 10px 40px rgba(60,20,40,.08);padding:26px 24px 22px;min-height:420px}
+.chat h1{font-size:22px;margin:0 0 14px;letter-spacing:-.01em;font-weight:700}
+.log{display:flex;flex-direction:column;gap:9px}
+.b{max-width:92%;padding:11px 15px;border-radius:14px;background:var(--bubble);color:var(--text);line-height:1.5;animation:pop .22s ease-out}
+.b.me{align-self:flex-end;background:var(--pink);color:#fff;font-weight:600;border-bottom-right-radius:5px}
+.b.note{background:transparent;padding:4px 0;color:var(--muted);font-size:13.5px}
+.b.wide{max-width:100%;background:transparent;padding:0}
+.b .ok{color:var(--ok);font-weight:700}
+@keyframes pop{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.typing{display:inline-flex;gap:4px;padding:12px 15px;background:var(--bubble);border-radius:14px;width:max-content}
+.typing i{width:6px;height:6px;border-radius:50%;background:#b9b9c4;animation:blink 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.ctl{margin-top:16px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+.btn{border:0;border-radius:999px;padding:12px 20px;font-weight:700;cursor:pointer;background:var(--pink);color:#fff;transition:transform .08s,box-shadow .2s,opacity .2s;box-shadow:0 6px 18px rgba(255,61,139,.28);text-decoration:none;display:inline-block}
+.btn:hover{transform:translateY(-1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;transform:none}
+.btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line);box-shadow:none}
+.btn.ghost:hover{border-color:#cfcfd8}
+.btn.sm{padding:8px 14px;font-size:13.5px}
+.btn.link{background:none;border:0;box-shadow:none;color:var(--muted);font-weight:600;padding:8px 6px;text-decoration:underline;text-underline-offset:3px}
+.lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:6px 0 8px}
+.in{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;font:inherit;background:#fff;color:var(--ink);outline:none;transition:border-color .15s,box-shadow .15s}
+.in:focus{border-color:var(--pink);box-shadow:0 0 0 4px rgba(255,61,139,.12)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row2.em{grid-template-columns:1fr 1.4fr}.row2.code{grid-template-columns:1fr auto}
+.err{color:#c62828;font-size:13px;margin-top:8px;display:none}.err.show{display:block}
+.hint{color:var(--muted);font-size:12.5px}
+/* search dropdown */
+.dd{border:1.5px solid var(--line);border-radius:12px;margin-top:8px;max-height:280px;overflow:auto;background:#fff}
+.dd .it{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--line)}
+.dd .it:last-child{border-bottom:0}.dd .it:hover,.dd .it.on{background:var(--pink-soft)}
+.dd .it b{font-weight:600}.dd .it small{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.dd .empty{padding:14px;color:var(--muted);font-size:14px}
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:14px;color:var(--ink)}
+.chip.on{border-color:var(--pink);background:var(--pink-soft);color:var(--pink-ink)}
+.chip.sm{padding:5px 11px;font-size:12.5px}
+/* listing before/after */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+.lst{border:1.5px solid var(--line);border-radius:14px;padding:14px;background:#fff;position:relative}
+.lst .tag{position:absolute;top:-9px;left:12px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;padding:2px 8px;border-radius:6px;background:#eee;color:var(--muted)}
+.lst.live{border-color:var(--pink)}.lst.live .tag{background:var(--pink);color:#fff}
+.lst b{display:block;font-size:14.5px}.lst small{color:var(--muted);display:block;font-size:12.5px}
+.lst .menu{margin-top:10px;display:grid;gap:5px}
+.lst .menu div{display:flex;justify-content:space-between;font-size:12.5px;border-top:1px dashed var(--line);padding-top:5px}
+.lst .menu span:last-child{font-weight:700}
+.lst .order{margin-top:10px;background:var(--pink);color:#fff;border-radius:8px;text-align:center;padding:7px;font-weight:700;font-size:13px}
+.lst.dim .menu,.lst.dim .order{filter:blur(2.5px);opacity:.35;pointer-events:none}
+.lst .nope{margin-top:10px;font-size:12.5px;color:var(--faint);text-align:center;font-style:italic}
+.offer{display:inline-flex;align-items:center;gap:8px;background:#fff8e1;border:1.5px solid #ffd666;color:#6b4e00;border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px}
+.offer i{width:8px;height:8px;border-radius:50%;background:#f5b800;display:inline-block}
+.proof{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.proof small{color:var(--faint);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-right:4px}
+.proof span{font-size:12.5px;border:1px solid var(--line);border-radius:6px;padding:3px 8px;color:var(--muted);background:#fff}
+.quote{border-left:3px solid var(--pink);padding:8px 14px;margin-top:12px;font-size:14px;color:var(--text);background:#fff;border-radius:0 12px 12px 0}
+.quote small{display:block;color:var(--muted);margin-top:4px}
+/* location picker */
+.lp{border:1.5px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+.lp-head{position:sticky;top:0;z-index:2;background:#fff;border-bottom:1.5px solid var(--line);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.lp-total{font-weight:800;font-size:15px}.lp-total small{display:block;color:var(--muted);font-weight:500;font-size:12.5px}.lp-total .amt{color:var(--pink)}
+.lp-links{display:flex;gap:12px;font-size:13px;font-weight:600;white-space:nowrap}.lp-links a{cursor:pointer;color:var(--pink-ink);text-decoration:none}
+.lp-body{max-height:380px;overflow:auto}
+.lp-g{border-bottom:1px solid var(--line)}
+.lp-gh{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#faf9fc;cursor:pointer;user-select:none}
+.lp-gh .tog{margin-left:auto;color:var(--faint);font-size:12px;transition:transform .2s}
+.lp-g.closed .tog{transform:rotate(-90deg)}.lp-g.closed .lp-rows{display:none}
+.lp-gh b{font-weight:700;font-size:14px}.lp-gh small{color:var(--muted);font-size:12.5px}
+.lp-gh .x{margin-left:4px;color:var(--faint);font-size:12px;cursor:pointer}.lp-gh .x:hover{color:#c62828}
+.lp-r{display:flex;align-items:center;gap:12px;padding:10px 14px 10px 18px;cursor:pointer;border-top:1px solid #f1f1f5;user-select:none}
+.lp-r:hover{background:#fff6f9}.lp-r.on{background:#fff2f7}
+.lp-r .t{min-width:0}.lp-r b{display:block;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lp-r small{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.lp-r .you{font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:var(--pink-ink);background:var(--pink-soft);border-radius:5px;padding:2px 6px;margin-left:auto;flex:none}
+.rb{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid #cfcfd8;background:#fff;display:grid;place-items:center;transition:all .12s}
+.rb::after{content:"";width:10px;height:10px;border-radius:50%;background:#fff;transform:scale(0);transition:transform .12s}
+.on>.rb,.rb.on{border-color:var(--pink);background:var(--pink)}.on>.rb::after,.rb.on::after{transform:scale(1)}
+.rb.part{border-color:var(--pink);background:#fff}.rb.part::after{background:var(--pink);transform:scale(.6);border-radius:2px;width:10px;height:3px}
+.lp-foot{padding:10px 14px;border-top:1.5px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#fff}
+.lp-foot .hint{margin-left:auto}
+/* summary */
+.sum{border:1.5px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px;background:#fff}
+.sum>div{display:grid;grid-template-columns:150px 1fr;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:14px}
+.sum>div:last-child{border-bottom:0}
+.sum>div>span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;padding-top:3px}
+/* terms */
+.tick{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;cursor:pointer;margin-bottom:10px;font-size:14px;line-height:1.45;background:#fff}
+.tick.on{border-color:var(--pink);background:#fff6f9}.tick .rb{margin-top:1px;border-radius:6px}.tick .rb::after{border-radius:2px;width:8px;height:8px}.tick input{display:none}
+/* card choice */
+.choice{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.choice>div{border:1.5px solid var(--line);border-radius:14px;padding:14px;background:#fff;cursor:pointer}
+.choice>div.pri{border-color:var(--pink);background:#fff6f9}
+.choice b{display:block;font-size:15px}.choice small{display:block;color:var(--muted);font-size:12.5px;margin-top:3px}
+.choice .big{font-size:20px;font-weight:800;color:var(--pink-ink);margin-top:6px}
+/* record panel */
+.rec{background:var(--card);border-radius:var(--r);box-shadow:0 10px 40px rgba(60,20,40,.08);padding:20px 20px 16px;position:sticky;top:18px}
+.rec .lbl{margin-top:0}.rec .empty{color:var(--muted);font-size:14px;padding:20px 0}
+.kv{padding:10px 0;border-bottom:1px solid var(--line)}.kv:last-child{border-bottom:0}
+.kv .k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:8px}
+.kv .k em{font-style:normal;font-size:9px;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--faint);letter-spacing:.1em}
+.kv .v{margin-top:3px;font-size:14px;word-break:break-word}
+.locs{display:flex;flex-direction:column;max-height:260px;overflow:auto}
+.locs .l{padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}.locs .l b{display:block;font-weight:600}.locs .l small{color:var(--muted)}.locs .l.off{opacity:.4}
+.sys{display:flex;flex-wrap:wrap;gap:6px}.sys code{font-size:11.5px;background:#f6f6f9;border:1px solid var(--line);border-radius:6px;padding:3px 7px}
+.fine{font-size:12px;color:var(--faint);margin-top:12px;line-height:1.45}
+/* success */
+.steps{border:1.5px solid var(--line);border-radius:14px;padding:6px 16px;margin-top:12px;background:#fff}
+.steps>div{display:grid;grid-template-columns:14px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.steps>div:last-child{border-bottom:0}.steps i{width:9px;height:9px;border-radius:50%;background:#dcdce3;margin-top:7px}
+.steps>div.ok i{background:var(--ok)}.steps>div.now i{background:var(--pink);box-shadow:0 0 0 4px rgba(255,61,139,.18)}
+.steps b{display:block}.steps span{color:var(--muted);font-size:13px}
+/* map modal */
+.modal{position:fixed;inset:0;background:rgba(10,8,12,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal.show{display:flex}
+.mbox{background:#fff;border-radius:18px;width:min(900px,100%);max-height:94vh;overflow:auto;padding:22px}
+.mbox h3{margin:0 0 6px;font-size:20px}.mbox p{margin:0 0 14px;color:var(--muted);font-size:14px}
+.cov{display:flex;align-items:center;justify-content:space-between;background:var(--pink-soft);border-radius:12px;padding:12px 16px;margin-bottom:12px}
+.cov b{font-size:26px;color:var(--pink-ink)}.cov small{display:block;color:var(--muted)}
+#map{height:420px;border-radius:12px;border:1.5px solid var(--line)}
+.mclose{float:right;border:0;background:#f1f1f5;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px}
+.faq{border:1.5px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px;background:#fff}
+.faq details{border-bottom:1px solid var(--line);padding:0 14px}.faq details:last-child{border-bottom:0}
+.faq summary{padding:11px 0;font-weight:600;cursor:pointer;font-size:14px}.faq p{margin:0 0 12px;font-size:13.5px;color:var(--muted)}
+.banner{background:#fff8e1;border:1.5px solid #ffe08a;color:#7a5a00;border-radius:12px;padding:10px 14px;font-size:13.5px;margin-bottom:14px}
+.rectoggle{display:none}
 @media (max-width:900px){
-  .shell{grid-template-columns:1fr;gap:20px;padding:20px 14px 48px}
-  .rail{position:static;order:-1}
-  .record-body{max-height:min(46vh,380px);overflow-y:auto}
-  .msg{max-width:94%}
-  .msg-poof .bubble.lead{font-size:21px}
-  .field-row{grid-template-columns:1fr}
+  .grid{grid-template-columns:1fr}.rec{position:static}.rectoggle{display:block;margin:0 0 12px}.rec.collapsed{display:none}
+  .progress .bar{width:70px}.ba,.choice{grid-template-columns:1fr}.row2,.row2.em{grid-template-columns:1fr}.row2.code{grid-template-columns:1fr auto}
 }
 </style>
 </head>
 <body>
-
-<main class="shell">
-  <header class="masthead">
-    <div class="wordmark">poof<span>.</span></div>
-    <div id="progress"></div>
+<div class="wrap">
+  <header>
+    <a class="logo" href="https://business.poof.ca">poof<b>.</b></a>
+    <div class="progress"><span id="stepLabel">Step 1 of 5 · Store</span><span class="bar"><i id="stepBar"></i></span></div>
   </header>
+  <div id="notReady" class="banner" style="display:none">Stripe keys aren't set in Vercel yet — the card step will not work until <code>STRIPE_SECRET_KEY</code> and <code>STRIPE_PUBLISHABLE_KEY</code> are added. Everything else works.</div>
+  <button class="btn ghost sm rectoggle" id="recToggle">Show store record</button>
+  <div class="grid">
+    <section class="chat">
+      <h1 id="h1">Your store is already on Poof.</h1>
+      <div class="log" id="log"></div>
+      <div class="ctl" id="ctl"></div>
+    </section>
+    <aside class="rec collapsed" id="rec">
+      <div class="lbl">Store record</div>
+      <div id="recBody"><div class="empty">Nothing here yet. Once you give us a store name we'll pull what's already on record and you can correct anything we get wrong.</div></div>
+      <div class="fine">Store details come from the AGCO public register (authorized-to-open stores only) and Google. You confirm every field before anything goes live.</div>
+    </aside>
+  </div>
+</div>
+<div class="modal" id="mapModal"><div class="mbox">
+  <button class="mclose" id="mapClose" aria-label="Close">×</button>
+  <h3>Your coverage on the marketplace</h3>
+  <p>Brands buy advertising against the areas where demand is densest. Each of your stores becomes a coverage cell — a catchment Poof can route orders into.</p>
+  <div class="cov"><div><b id="covKm">—</b><small id="covSub">Approximate coverage</small></div><small>5 km catchment per store</small></div>
+  <div id="map"></div>
+</div></div>
 
-  <section class="thread" id="thread" aria-live="polite" aria-label="Onboarding conversation"></section>
+<script>
+(function(){
+'use strict';
+/* ============================================================
+   Poof retailer onboarding v3 — onboarding.poof.ca
+   Steps: Store → Locations → Systems → Review → Agreement
+   Entry points: /  (search)  ·  /s/CRSA…  (personal link)  ·  /r/<token> (resume)
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const money = (n) => '$' + n.toLocaleString('en-CA', {minimumFractionDigits: 0});
+const plural = (n, a, b) => n === 1 ? a : b;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const titleCase = (s) => String(s).toLowerCase().replace(/(^|[\s\-(])([a-z])/g, (m, p, c) => p + c.toUpperCase());
 
-  <aside class="rail">
-    <div class="record">
-      <div class="record-head">
-        <div class="record-title">Store record</div>
-        <div class="record-count" id="recordCount"></div>
-      </div>
-      <div class="record-body" id="record">
-        <p class="record-empty">Nothing here yet. Once you give us a store name we'll pull what's already on record and you can correct anything we get wrong.</p>
-      </div>
-    </div>
-    <p class="fineprint">We check the Poof POS index, the AGCO retail register, and public listings. You confirm every field before anything goes live.</p>
-  </aside>
-</main>
+let CFG = { priceCad: 50, termsUrl: 'https://business.poof.ca/terms', termsVersion: '2026-08-15', stripePublishableKey: '', mapKey: '', ready: false, offer: null, calendly: '', sms: '', testimonial: null, brands: [], retailerCount: '', ga4: '' };
+const STEPS = ['Store', 'Locations', 'Systems', 'Review', 'Agreement'];
+const POS = ['Cova', 'Greenline', 'Blaze', 'Dutchie POS', 'Tendy', 'Other'];
+const PROC = ['Merrco', 'Moneris', 'Clover', 'Other'];
+const ECOM = ['Dutchie', 'Breadstack', 'Buddi', 'None', 'Other'];
+const DELIV = ['Canfleet', 'Onfleet', 'In-house (no software)', 'Other'];
+let FAST = false; // deep link / resume → minimal typing theatre
 
-<script type="module">
-/* =====================================================================
-   Poof retailer onboarding — conversational flow controller
-   ===================================================================== */
-
-const thread = document.getElementById('thread');
-const record = document.getElementById('record');
-const recordCount = document.getElementById('recordCount');
-
-const state = {
-  storeName: null,
-  bannerId: null,
-  bannerIds: [],
-  locationIds: [],
-  profile: null,
-  confirmedLocations: [],
-  goals: ['adnetwork'],   // the only paid surface today
-  referralCode: null,
-  contact: { name: '', email: '', phone: '' },
-  done: new Set(),
-  pendingRewind: null,
-  // Vendor answers only — never credentials. API keys are collected later,
-  // in the authenticated admin panel.
-  stack: {
-    pos: null, posOther: null,
-    payment: null, paymentOther: null,
-    ecommerce: null, ecommerceOther: null,
-    delivers: null, deliverySoftware: null, deliveryOther: null, wantsDelivery: null
-  }
+/* ---------- state ---------- */
+const S = {
+  chain: null, extraChains: [], entryStoreId: null, overrides: {},
+  selected: [], groups: [],
+  systems: { pos: '', processor: '', ecommerce: '', delivery: null, deliverySoftware: '' },
+  referral: null, owner: { name: '', email: '', mobile: '' },
+  acceptance: null, customerId: null, setupIntentId: null, orderFormUrl: null, cardSkipped: false, step: 0,
 };
+function save(){ try{ localStorage.setItem('poof-onb', JSON.stringify({ S, at: Date.now() })); }catch(e){} }
+function clearSave(){ try{ localStorage.removeItem('poof-onb'); }catch(e){} }
 
+/* ---------- analytics ---------- */
+function track(name, params){ try { if (window.gtag) gtag('event', name, { store: S.chain ? S.chain.name : '', locations: S.selected.length, entry: S.entryStoreId ? 'link' : 'search', ...(params || {}) }); } catch(e){} }
+function loadGA(id){ if (!id) return; const s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + id; document.head.appendChild(s); window.dataLayer = window.dataLayer || []; window.gtag = function(){ dataLayer.push(arguments); }; gtag('js', new Date()); gtag('config', id, { send_page_view: true }); }
+function lead(stage, extra){ if (!S.owner.email) return; fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: S.owner.email, name: S.owner.name, stage, storeName: storeName(), chain: S.chain && S.chain.slug, entryStoreId: S.entryStoreId, state: { extra: S.extraChains.map(c => c.slug), selected: S.selected, groups: S.groups, systems: S.systems, owner: S.owner, referral: S.referral }, ...(extra || {}) }) }).catch(() => {}); }
 
+/* ---------- chat primitives ---------- */
+const log = $('log'), ctl = $('ctl');
+function say(html, cls){ const d = document.createElement('div'); d.className = 'b' + (cls ? ' ' + cls : ''); d.innerHTML = html; log.appendChild(d); scroll(); return d; }
+function me(text){ return say(esc(text), 'me'); }
+function note(html){ return say(html, 'note'); }
+async function typing(ms){ if (reduce) return; if (FAST) ms = Math.min(ms, 120); const t = document.createElement('div'); t.className = 'typing'; t.innerHTML = '<i></i><i></i><i></i>'; log.appendChild(t); scroll(); await sleep(ms); t.remove(); }
+function scroll(){ requestAnimationFrame(() => { const r = ctl.getBoundingClientRect(); if (r.bottom > innerHeight - 20) window.scrollTo({ top: scrollY + r.bottom - innerHeight + 40, behavior: reduce ? 'auto' : 'smooth' }); }); }
+function control(render){ return new Promise(resolve => { ctl.innerHTML = ''; render(ctl, (v) => { ctl.innerHTML = ''; resolve(v); }); scroll(); }); }
+function buttons(list){ return control((el, done) => { const a = document.createElement('div'); a.className = 'actions'; list.forEach(([label, value, ghost]) => { const b = document.createElement('button'); b.className = 'btn' + (ghost ? ' ghost' : ''); b.textContent = label; b.onclick = () => { me(label); done(value); }; a.appendChild(b); }); el.appendChild(a); }); }
+function setStep(i){ S.step = i; $('stepLabel').textContent = `Step ${i + 1} of ${STEPS.length} · ${STEPS[i]}`; $('stepBar').style.width = ((i + 1) / STEPS.length * 100) + '%'; save(); }
+function errBox(el){ const e = document.createElement('div'); e.className = 'err'; el.appendChild(e); return (msg) => { e.textContent = msg || ''; e.classList.toggle('show', !!msg); }; }
 
-/* ---------- thread primitives ---------- */
+/* ---------- derived ---------- */
+function allStores(){ const out = []; if (S.chain) out.push(...S.chain.stores); S.extraChains.forEach(c => out.push(...c.stores)); return out; }
+function storeById(id){ return allStores().find(s => s.id === id); }
+function selectedStores(){ return S.selected.map(storeById).filter(Boolean); }
+function storeName(){ return S.overrides.name || (S.chain && S.chain.name) || ''; }
+function monthly(){ return S.selected.length * CFG.priceCad; }
+function partnerList(){ const p = [S.systems.pos, S.systems.processor, S.systems.delivery ? S.systems.deliverySoftware : null].filter(x => x && !/^other|in-house|none/i.test(x)); return p.length ? p.join(', ') : 'your POS and payment providers'; }
+function offerText(){ return CFG.offer ? `${CFG.offer.months} months free` : ''; }
+function offerUntil(){ return CFG.offer ? new Date(CFG.offer.until + 'T12:00:00').toLocaleDateString('en-CA', { month: 'long', day: 'numeric' }) : ''; }
 
-const wait = ms => new Promise(r => setTimeout(r, ms));
-
-function scrollDown() {
-  requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }));
+/* ---------- store record panel ---------- */
+function kv(k, v, src){ return v ? `<div class="kv"><div class="k">${esc(k)}${src ? `<em>${src}</em>` : ''}</div><div class="v">${v}</div></div>` : ''; }
+function renderRecord(){
+  const c = S.chain; const body = $('recBody');
+  if (!c) { body.innerHTML = '<div class="empty">Nothing here yet. Once you give us a store name we\'ll pull what\'s already on record and you can correct anything we get wrong.</div>'; return; }
+  const p = c.places || {}; const stores = allStores(); const sel = new Set(S.selected); const hasSel = S.selected.length > 0;
+  let html = kv('Store', esc(storeName()), 'AGCO') + kv('AGCO status', 'Authorized to Open', 'AGCO')
+    + kv('Phone', esc(S.overrides.phone || p.phone), S.overrides.phone ? 'YOU' : 'GOOGLE')
+    + (() => { const w = S.overrides.website || p.website || (storeById(S.entryStoreId) || c.stores[0]).website; return kv('Website', w ? `<a href="${esc(w)}" target="_blank" rel="noopener">${esc(w.replace(/^https?:\/\//, ''))}</a>` : '', S.overrides.website ? 'YOU' : p.website ? 'GOOGLE' : 'AGCO'); })()
+    + kv('Google rating', p.rating ? `${p.rating} ★ · ${p.ratings || 0} reviews` : '', 'GOOGLE');
+  html += `<div class="kv"><div class="k">Locations · ${hasSel ? S.selected.length + ' of ' : ''}${stores.length}</div><div class="locs">`
+    + stores.map(s => `<div class="l${hasSel && !sel.has(s.id) ? ' off' : ''}"><b>${esc(s.city)}${s.id === S.entryStoreId ? ' · <span style="color:var(--pink-ink)">you</span>' : ''}</b><small>${esc(s.addr)}, ${esc(s.postal)} · ${esc(s.id)}</small></div>`).join('') + '</div></div>';
+  if (S.groups.length) html += kv('Groups', S.groups.map(g => `<code>${esc(g.name)} · ${g.ids.length}</code>`).join(' '));
+  const sy = S.systems; const bits = [];
+  if (sy.pos) bits.push('POS: ' + sy.pos); if (sy.processor) bits.push('Processor: ' + sy.processor); if (sy.ecommerce) bits.push('E-commerce: ' + sy.ecommerce); if (sy.delivery !== null) bits.push('Delivery: ' + (sy.delivery ? 'Yes — ' + sy.deliverySoftware : 'No'));
+  if (bits.length) html += `<div class="kv"><div class="k">Your systems<em>YOU</em></div><div class="sys">${bits.map(b => `<code>${esc(b)}</code>`).join('')}</div></div>`;
+  if (S.referral) html += kv('Referral', `<code>${esc(S.referral.code)}</code> ${esc(S.referral.description || '')}`);
+  if (S.owner.email) html += kv('Account owner', `${esc(S.owner.name || '')}${S.owner.name ? ' · ' : ''}${esc(S.owner.email)}${S.owner.mobile ? ' · ' + esc(S.owner.mobile) : ''}`, 'YOU');
+  if (hasSel) html += kv('Retail Ad Network', `${S.selected.length} × ${money(CFG.priceCad)} = <b>${money(monthly())}/mo</b> + HST${CFG.offer ? ` · <span style="color:var(--pink-ink)">${offerText()} with card</span>` : ''}`);
+  const jumps = []; if (S.chain) jumps.push(['Store', 'store']); if (hasSel) jumps.push(['Locations', 'locations']); if (sy.pos) jumps.push(['Systems', 'systems']); if (S.owner.name) jumps.push(['Details', 'review']);
+  if (jumps.length && S.step < 4) html += `<div class="kv"><div class="k">Change an answer</div><div class="chips" style="margin-top:6px">${jumps.map(j => `<button class="chip sm" data-jump="${j[1]}">${j[0]}</button>`).join('')}</div></div>`;
+  body.innerHTML = html;
+  body.querySelectorAll('[data-jump]').forEach(b => b.onclick = () => jump(b.dataset.jump));
 }
+$('recToggle').onclick = () => { const r = $('rec'); r.classList.toggle('collapsed'); $('recToggle').textContent = r.classList.contains('collapsed') ? 'Show store record' : 'Hide store record'; };
 
-function say(html, { lead = false } = {}) {
-  const el = document.createElement('div');
-  el.className = 'msg msg-poof';
-  el.innerHTML = `<div class="bubble${lead ? ' lead' : ''}">${html}</div>`;
-  thread.appendChild(el);
-  scrollDown();
-  return el;
-}
-
-function reply(text) {
-  const el = document.createElement('div');
-  el.className = 'msg msg-them';
-  el.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
-  thread.appendChild(el);
-  scrollDown();
-}
-
-async function typing(ms = 700) {
-  const el = document.createElement('div');
-  el.className = 'msg msg-poof';
-  el.innerHTML = '<div class="typing"><i></i><i></i><i></i></div>';
-  thread.appendChild(el);
-  scrollDown();
-  await wait(ms);
-  el.remove();
-}
-
-/**
- * Rewind: lets the person step back and correct an earlier answer.
- *
- * Implemented by rejecting whatever control is currently awaiting input, which
- * unwinds the step function without every step needing to know about it. The
- * runner catches it, truncates the thread back to that step's mark, and
- * re-runs from there.
- */
-class Rewind { constructor(step) { this.step = step; } }
-let activeReject = null;
-
-/** Renders a control block and resolves when the user acts on it. */
-function control(builder) {
-  return new Promise((resolve, reject) => {
-    // A rewind requested mid-animation lands here instead of being swallowed.
-    if (state.pendingRewind) {
-      const step = state.pendingRewind;
-      state.pendingRewind = null;
-      return reject(new Rewind(step));
-    }
-    const el = document.createElement('div');
-    el.className = 'controls';
-    thread.appendChild(el);
-    scrollDown();
-    activeReject = reject;
-    builder(el, value => {
-      activeReject = null;
-      el.remove();
-      resolve(value);
-    });
-  });
-}
-
-function requestRewind(step) {
-  if (activeReject) {
-    const reject = activeReject;
-    activeReject = null;
-    reject(new Rewind(step));
-  } else {
-    state.pendingRewind = step;   // picked up by the next control()
-  }
-}
-
-const escapeHtml = (s = '') => String(s).replace(/[&<>"']/g,
-  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-/* ---------- store record rail ---------- */
-
-const SOURCE_LABEL = { agco: 'AGCO', google: 'Google', poof: 'Poof index', entered: 'You', you: 'You' };
-const STATUS_LABEL = { authorized: 'Authorized to open', pending: 'Application in progress', cancelled: 'Licence cancelled', unknown: 'Not on file' };
-
-function renderRecord() {
-  const p = state.profile;
-  if (!p) return;
-
-  const rows = [];
-  const push = (key, valueHtml, source) => {
-    if (!valueHtml) return;
-    rows.push(`
-      <div class="rec">
-        <div class="rec-key">${key}${source ? `<span class="src" data-s="${source}">${SOURCE_LABEL[source] || source}</span>` : ''}</div>
-        <div class="rec-val">${valueHtml}</div>
-      </div>`);
-  };
-
-  push('Store', escapeHtml(p.storeName?.value || ''), p.storeName?.source);
-
-  if (p.status?.overall && p.status.overall !== 'unknown') {
-    const s = p.status.overall;
-    const colour = s === 'authorized' ? 'var(--verified)' : s === 'pending' ? 'var(--warn-text)' : 'var(--danger-text)';
-    push('AGCO status',
-      `<span style="color:${colour}">${STATUS_LABEL[s]}</span>` +
-      (p.status.authorized > 1 ? ` <span style="color:var(--dim)">· ${p.status.authorized} stores</span>` : ''),
-      'agco');
-  }
-
-  if (p.licenceNumber?.value)
-    push('Licence', `<span style="font-family:var(--mono);font-size:13.5px">${escapeHtml(p.licenceNumber.value)}</span>`, p.licenceNumber.source);
-  if (p.locations?.length === 1)
-    push('Address', escapeHtml(p.address?.value || ''), p.address?.source);
-  push('Phone', escapeHtml(p.phone?.value || ''), p.phone?.source);
-  if (p.website?.value)
-    push('Website', `<a href="${escapeHtml(p.website.value)}" target="_blank" rel="noopener" style="color:var(--muted)">${escapeHtml(p.website.value.replace(/^https?:\/\//, ''))}</a>`, p.website.source);
-
-  if (p.hours?.prose)
-    push('Hours', `<span class="hours-prose">${escapeHtml(p.hours.prose)}</span>`, p.hours.source);
-
-  if (p.rating?.value)
-    push('Google rating', `${p.rating.value} ★ <span style="color:var(--dim)">· ${p.rating.count} reviews</span>`, 'google');
-
-  const locs = state.confirmedLocations?.length ? state.confirmedLocations : (p.locations || []);
-  if (locs.length > 1) {
-    const shown = locs.slice(0, 8);
-    rows.push(`
-      <div class="rec">
-        <div class="rec-key">Locations<span class="src" data-s="agco">${locs.length}</span></div>
-        <div>${shown.map(l => `
-          <div class="loc">
-            <div>
-              <div class="loc-name">${escapeHtml(l.name)}</div>
-              <div class="loc-addr">${escapeHtml(l.address || '')}</div>
-            </div>
-          </div>`).join('')}
-          ${locs.length > shown.length ? `<div class="loc-addr" style="padding-top:9px">+ ${locs.length - shown.length} more</div>` : ''}
-        </div>
-      </div>`);
-  }
-
-  if (p.stack?.length) {
-    rows.push(`
-      <div class="rec">
-        <div class="rec-key">POS &amp; payments</div>
-        <div class="chips">${p.stack.map(s => `
-          <span class="chip" data-conf="${s.source}"><span class="dot"></span>${escapeHtml(s.label)}</span>`).join('')}
-        </div>
-        <div class="rec-val small" style="margin-top:8px">
-          ${p.stack.some(s => s.source === 'verified')
-            ? 'Green means we already have a live connection to that system.'
-            : 'Detected from your site — we\'ll confirm during setup.'}
-        </div>
-      </div>`);
-  }
-
-  const declared = [];
-  if (state.stack.pos) declared.push(['POS', posLabel()]);
-  if (state.stack.payment) declared.push(['Payments', payLabel()]);
-  if (state.stack.ecommerce) declared.push(['E-commerce', ecomLabel()]);
-  if (state.stack.delivers !== null) {
-    declared.push(['Delivery', state.stack.delivers
-      ? (delLabel() || 'Yes')
-      : state.stack.wantsDelivery ? 'No — interested' : 'No']);
-  }
-  if (declared.length) {
-    rows.push(`
-      <div class="rec">
-        <div class="rec-key">Your systems<span class="src" data-s="you">You</span></div>
-        <div class="chips">${declared.map(([k, v]) => `<span class="chip">${escapeHtml(k)}: ${escapeHtml(v)}</span>`).join('')}</div>
-      </div>`);
-  }
-
-  if (state.referralCode) {
-    rows.push(`<div class="credit-note"><b>${escapeHtml(state.referralCode)}</b> applied — three months of credit, confirmed at checkout.</div>`);
-  }
-
-  const editable = STEPS.filter(s => s[2] && state.done.has(s[0]));
-  if (editable.length) {
-    rows.push(`
-      <div class="rec-edit">
-        <div class="rec-edit-label">Change an answer</div>
-        <div class="rec-edit-btns">
-          ${editable.map(s => `<button type="button" class="rec-edit-btn" data-step="${s[0]}">${escapeHtml(s[2])}</button>`).join('')}
-        </div>
-      </div>`);
-  }
-
-  rows.push('<p class="rec-foot">Everything here is editable in your admin panel after signup.</p>');
-
-  record.innerHTML = rows.join('');
-  record.querySelectorAll('.rec-edit-btn').forEach(b =>
-    b.addEventListener('click', () => requestRewind(b.dataset.step)));
-  const integrated = p.coverage?.integrated || 0;
-  recordCount.textContent = integrated ? `${integrated} connected` : '';
-}
-
-/* ---------- API ---------- */
-
-async function api(path, opts) {
-  const res = await fetch(path, opts);
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Something went wrong.');
-  return data;
-}
-
-/* =====================================================================
-   Flow
-   ===================================================================== */
-
-const STEPS = [
-  ['store',    askStoreName,    'Store'],
-  ['enrich',   enrich,          null],
-  ['confirm',  confirmProfile,  null],
-  ['value',    valueBeat,       null],
-  ['location', confirmLocation, 'Locations'],
-  ['stack',    askStack,        'Systems'],
-  ['delivery', askDelivery,     'Delivery'],
-  ['referral', askReferral,     'Referral'],
-  ['contact',  askContact,      'Contact'],
-  ['summary',  showSummary,     null],
-  ['terms',    acceptTerms,     null],
-  ['payment',  toPayment,       null]
-];
-
-/** Six visible phases, for the progress indicator. */
-const PHASES = [
-  ['Store',     ['store', 'enrich', 'confirm', 'value']],
-  ['Locations', ['location']],
-  ['Systems',   ['stack']],
-  ['Delivery',  ['delivery']],
-  ['Details',   ['referral', 'contact']],
-  ['Payment',   ['summary', 'terms', 'payment']]
-];
-
-function renderProgress(stepId) {
-  const el = document.getElementById('progress');
-  if (!el) return;
-  const i = PHASES.findIndex(ph => ph[1].includes(stepId));
-  if (i < 0) return;
-  el.innerHTML = `
-    <span class="prog-label">Step ${i + 1} of ${PHASES.length} · ${PHASES[i][0]}</span>
-    <span class="prog-track">${PHASES.map((_, k) =>
-      `<i class="${k < i ? 'done' : k === i ? 'now' : ''}"></i>`).join('')}</span>`;
-}
-
-const marks = {};
-
-async function run() {
-  const params = new URLSearchParams(location.search);
-  if (params.get('onboarding') === 'complete') return finished();
-  if (params.get('onboarding') === 'cancelled') return cancelled();
-
-  say('Your store is already on Poof.', { lead: true });
-  await wait(280);
+/* ============================================================
+   STEP 1 — STORE
+   ============================================================ */
+async function intro(){
+  setStep(0); track('onb_view', { entry: 'search' });
   say('Every licensed store in Ontario is listed on our marketplace — name and location. Shoppers can find you. They just can\'t buy from you yet.');
-  await wait(280);
-  say('Let\'s turn that on. Takes about two minutes, and we\'ll fill in most of it for you.');
-
-  let i = 0;
-  let resumeAt = null;   // where to jump back to once a correction is done
-  let spanEnd = null;    // last step of the correction
-
-  while (i < STEPS.length) {
-    const [id, fn] = STEPS[i];
-    marks[id] = thread.children.length;
-    renderProgress(id);
-    try {
-      await fn();
-      state.done.add(id);
-      renderRecord();
-
-      // Finished a correction — pick up where the conversation left off.
-      if (spanEnd !== null && i >= spanEnd) {
-        const back = resumeAt;
-        resumeAt = null; spanEnd = null;
-        await typing(380);
-        say('Updated. Picking up where we were.');
-        i = back;
-        continue;
-      }
-      i++;
-    } catch (err) {
-      if (!(err instanceof Rewind)) throw err;
-
-      const target = STEPS.findIndex(s => s[0] === err.step);
-      if (target < 0) { i++; continue; }
-
-      // Nothing already answered is thrown away and nothing is removed from the
-      // thread — the correction is appended, so the conversation reads as one
-      // continuous exchange rather than rewinding and losing history.
-      clearOnly(err.step);
-      renderRecord();
-
-      const endId = REWIND_SPAN[err.step] || err.step;
-      spanEnd = STEPS.findIndex(s => s[0] === endId);
-      resumeAt = Math.max(i, resumeAt ?? 0);
-      i = target;
-
-      await typing(360);
-      say(`Sure — let's redo ${escapeHtml(REWIND_LABEL[err.step] || 'that')}.`);
-    }
-  }
-}
-
-/**
- * Changing the store name invalidates the lookup, so that correction re-runs
- * through the readback. Every other correction re-asks only its own question.
- */
-const REWIND_SPAN = { store: 'value' };
-
-const REWIND_LABEL = {
-  store: 'the store search', location: 'your locations', stack: 'your systems',
-  delivery: 'the delivery question', referral: 'the referral code',
-  contact: 'your contact details'
-};
-
-/** Clear only the answers belonging to this step. */
-function clearOnly(step) {
-  if (step === 'store') {
-    state.storeName = null; state.bannerId = null; state.bannerIds = []; state.locationIds = [];
-    state.profile = null; state.confirmedLocations = [];
-  }
-  if (step === 'location') state.confirmedLocations = [];
-  if (step === 'stack') {
-    state.stack.pos = state.stack.posOther = null;
-    state.stack.payment = state.stack.paymentOther = null;
-    state.stack.ecommerce = state.stack.ecommerceOther = null;
-  }
-  if (step === 'delivery') {
-    state.stack.delivers = state.stack.deliverySoftware = null;
-    state.stack.deliveryOther = null; state.stack.wantsDelivery = null;
-  }
-  if (step === 'referral') state.referralCode = null;
-  if (step === 'contact') state.contact = { name: '', email: '', phone: '' };
-}
-
-/** Store search with typeahead. Shared by the first question and "add another store". */
-function storeSearchControl(labelText, placeholder, excludeIds = []) {
-  return control((el, done) => {
-    el.innerHTML = `
-      <div class="control-label">${escapeHtml(labelText)}</div>
-      <div class="field">
-        <input type="text" id="storeInput" autocomplete="organization" placeholder="${escapeHtml(placeholder)}" aria-label="${escapeHtml(labelText)}">
-      </div>
-      <div class="suggest" id="suggest" role="listbox"></div>
-      <div class="btn-row"><button class="btn btn-primary" type="button" id="storeGo" disabled>Continue</button></div>`;
-
-    const input = el.querySelector('#storeInput');
-    const list = el.querySelector('#suggest');
-    const go = el.querySelector('#storeGo');
-    let timer;
-    input.focus();
-
-    input.addEventListener('input', () => {
-      go.disabled = input.value.trim().length < 2;
-      clearTimeout(timer);
-      timer = setTimeout(async () => {
-        const q = input.value.trim();
-        if (q.length < 2) { list.innerHTML = ''; return; }
-        try {
-          const qs = new URLSearchParams({ q });
-          if (excludeIds.length) qs.set('exclude', excludeIds.join(','));
-          const { candidates } = await api(`/api/lookup?${qs}`);
-          if (!candidates.length) {
-            list.innerHTML = `<div class="suggest-empty">No matches${excludeIds.length ? ' we haven\'t already added' : ''}. Try the address or CRSA number.</div>`;
-            return;
-          }
-          list.innerHTML = candidates.map(c => {
-            const where = c.city ? c.city : c.cityCount > 1 ? `${c.cityCount} cities` : '';
-            const meta = c.allCancelled
-              ? 'licence cancelled'
-              : `${c.locationCount} ${c.locationCount === 1 ? 'location' : 'locations'}`
-                + (c.pendingCount && !c.authorizedCount ? ' · pending' : '')
-                + (c.integrated ? ' · connected' : '');
-            let hint = '';
-            const n = (c.matchedLocations || []).length;
-            if (c.alreadyAdded) hint = `${c.alreadyAdded} already on your list`;
-            else if (c.matchedVia === 'licence' && n) hint = `licence ${c.matchedLocations[0].licenceNumber}`;
-            else if ((c.matchedVia === 'postal' || c.matchedVia === 'address') && n) hint = c.matchedLocations[0].address;
-            else if (c.matchedVia === 'city' && c.cityMatches) hint = `${c.cityMatches} in ${c.matchedLabel}`;
-            else if (c.matchedVia === 'name' && n === 1) hint = c.matchedLocations[0].city;
-            return `
-            <button class="suggest-item" type="button" role="option"
-              data-banner="${escapeHtml(c.bannerId)}"
-              data-name="${escapeHtml(c.name)}"
-              data-locs="${escapeHtml((c.matchedLocations || []).map(l => l.id).join(','))}">
-              <span>${escapeHtml(c.name)}${where ? ` <span style="color:var(--dim)">· ${escapeHtml(where)}</span>` : ''}
-                ${hint ? `<span class="suggest-hint">${escapeHtml(hint)}</span>` : ''}
-              </span>
-              <span class="suggest-meta"${c.allCancelled ? ' style="color:var(--danger-text)"' : ''}>${meta}</span>
-            </button>`;
-          }).join('');
-        } catch { list.innerHTML = ''; }
-      }, 220);
-    });
-
-    list.addEventListener('click', e => {
-      const btn = e.target.closest('.suggest-item');
-      if (!btn) return;
-      done({
-        name: btn.dataset.name,
-        bannerId: btn.dataset.banner,
-        locationIds: btn.dataset.locs ? btn.dataset.locs.split(',').filter(Boolean) : []
-      });
-    });
-
-    const submit = () => {
-      if (input.value.trim().length < 2) return;
-      done({ name: input.value.trim(), bannerId: null, locationIds: [] });
-    };
-    go.addEventListener('click', submit);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
-  });
-}
-
-/* --- step 1: store name with typeahead --- */
-
-async function askStoreName() {
-  await typing(600);
-  say('What\'s your store called? You can also search by address or CRSA licence number.');
-
-  const picked = await storeSearchControl('Store name', 'Store name, address, or CRSA number');
-  state.storeName = picked.name;
-  state.bannerId = picked.bannerId;
-  state.bannerIds = picked.bannerId ? [picked.bannerId] : [];
-  state.locationIds = picked.locationIds;
-  reply(picked.name);
-
-  await offerRelatedBanners();
-}
-
-/**
- * Some businesses are split across several banners in the AGCO register because
- * a branch is named after a neighbourhood rather than its city — Kindling
- * Cannabis is nine separate banners covering sixteen stores. Rather than merge
- * them automatically (many really are separate franchisees), surface them and
- * let the retailer say which are theirs.
- */
-async function offerRelatedBanners() {
-  if (!state.bannerId) return;
-
-  let related = [];
-  try {
-    const r = await api(`/api/lookup?related=${encodeURIComponent(state.bannerId)}`);
-    related = (r.related || []).filter(x => !x.allCancelled);
-  } catch { return; }
-  if (!related.length) return;
-
-  const doors = related.reduce((n, r) => n + r.locationCount, 0);
-
-  await typing(600);
-  say(`Quick check — the register also lists <strong>${related.length} other ${related.length === 1 ? 'store' : 'stores'}</strong> under a name close to yours. Some operators are listed this way when a branch is named after its neighbourhood rather than its city.`);
-  await wait(230);
-  say('Any of these yours?');
-
-  const chosen = await control((el, done) => {
-    el.innerHTML = `
-      <div class="control-label">Also on the register</div>
-      <div class="options options-scroll">
-        ${related.map((r, i) => `
-          <button class="option" type="button" aria-pressed="false" data-i="${i}">
-            <span class="option-mark" aria-hidden="true"></span>
-            <span><span class="option-title">${escapeHtml(r.name)}</span>
-              <span class="option-sub">${r.locationCount} ${r.locationCount === 1 ? 'location' : 'locations'} · ${escapeHtml(r.cities.join(', '))}${r.cityCount > 3 ? ' and more' : ''}</span>
-            </span>
-          </button>`).join('')}
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" type="button" id="relGo">Add selected</button>
-        <button class="btn btn-ghost" type="button" id="relAll">All ${related.length} are ours</button>
-        <button class="btn btn-ghost" type="button" id="relNone">None of these</button>
-      </div>`;
-
-    const chosenSet = new Set();
-    const go = el.querySelector('#relGo');
-    go.disabled = true;
-    el.querySelectorAll('.option').forEach(b => b.addEventListener('click', () => {
-      const on = b.getAttribute('aria-pressed') === 'true';
-      b.setAttribute('aria-pressed', String(!on));
-      on ? chosenSet.delete(+b.dataset.i) : chosenSet.add(+b.dataset.i);
-      go.disabled = chosenSet.size === 0;
-    }));
-    go.addEventListener('click', () => done([...chosenSet].map(i => related[i])));
-    el.querySelector('#relAll').addEventListener('click', () => done(related));
-    el.querySelector('#relNone').addEventListener('click', () => done([]));
-  });
-
-  if (!chosen.length) { reply('None of these'); return; }
-
-  state.bannerIds = [...new Set([...state.bannerIds, ...chosen.map(c => c.bannerId)])];
-  reply(chosen.length === related.length
-    ? `All ${related.length} are ours`
-    : chosen.map(c => c.name).join(', '));
-
-  const added = chosen.reduce((n, c) => n + c.locationCount, 0);
-  await typing(380);
-  say(`Added — that's ${added} more ${added === 1 ? 'store' : 'stores'} on the record.`);
-}
-
-/* --- step 2: enrichment --- */
-
-async function enrich() {
-  await typing(400);
-  const note = say('Give me a second — checking the AGCO register and looking you up on Google…');
-
-  try {
-    const qs = new URLSearchParams({ name: state.storeName });
-    if (state.bannerIds.length) qs.set('bannerIds', state.bannerIds.join(','));
-    else if (state.bannerId) qs.set('bannerId', state.bannerId);
-
-    const { profile } = await api(`/api/lookup?${qs}`);
-    state.profile = profile;
-    state.confirmedLocations = profile.locations || [];
-    renderRecord();
-    note.remove();
-  } catch (err) {
-    state.profile = blankProfile(state.storeName);
-    renderRecord();
-    note.querySelector('.bubble').innerHTML = 'Our lookup is having a moment, so let\'s do this the manual way. It\'s still quick.';
-  }
-}
-
-const blankProfile = name => ({
-  storeName: { value: name, source: 'entered' },
-  licenceNumber: { value: null, source: null },
-  address: { value: null, source: null },
-  website: { value: null, source: null },
-  phone: { value: null, source: null },
-  hours: { value: null, prose: null, source: null },
-  rating: null,
-  locations: [],
-  stack: [],
-  status: { authorized: 0, pending: 0, cancelled: 0, overall: 'unknown' },
-  coverage: { known: 0, integrated: 0 }
-});
-
-/* --- step 3: conversational readback + confirm --- */
-
-async function confirmProfile() {
-  const p = state.profile;
-  const locs = p.locations || [];
-  const st = p.status || {};
-
-  if (!locs.length) {
-    await typing(500);
-    say('I couldn\'t find you in the AGCO register under that name — no problem, we\'ll build the record together. It\'s a few extra fields, that\'s all.');
-    await manualCorrections();
-    return;
-  }
-
-  /* --- who and where --- */
-  await typing(650);
-  const cities = [...new Set(locs.map(l => l.name))];
-  const joinCities = list => list.length === 1 ? list[0]
-    : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
-
-  if (locs.length === 1) {
-    say(`Here's what I've got. <strong>${escapeHtml(p.storeName.value)}</strong> at ${escapeHtml(p.address.value || cities[0])}.`);
-  } else if (cities.length > 4) {
-    // Plain commas here — joinCities' "and" would collide with "and N more".
-    say(`Here's what I've got. <strong>${escapeHtml(p.storeName.value)}</strong>, ${locs.length} locations in ${cities.length} cities — ${escapeHtml(cities.slice(0, 3).join(', '))} and ${cities.length - 3} more.`);
-  } else {
-    say(`Here's what I've got. <strong>${escapeHtml(p.storeName.value)}</strong>, ${locs.length} locations — ${escapeHtml(joinCities(cities))}.`);
-  }
-
-  /* --- licence status --- */
-  await typing(500);
-  if (st.overall === 'authorized') {
-    const lic = p.licenceNumber.value;
-    if (locs.length === 1) {
-      say(`Licence ${lic ? `<strong>${escapeHtml(lic)}</strong> ` : ''}is showing <strong>authorized to open</strong> with the AGCO.`);
-    } else {
-      const all = st.authorized === locs.length;
-      say(`${all ? `All ${st.authorized}` : `${st.authorized} of them`} are showing <strong>authorized to open</strong> with the AGCO${st.pending ? `, and ${st.pending} more still in progress` : ''}.`);
-    }
-  } else if (st.overall === 'pending') {
-    say('The AGCO has you as <strong>in progress</strong> rather than authorized yet. That\'s fine — we can set everything up now and flip you live the day your authorization lands.');
-  } else if (st.overall === 'cancelled') {
-    say('Heads up: the AGCO is showing that licence as <strong>cancelled</strong>. If you\'ve reapplied or moved under a new licence, correct it below and we\'ll carry on.');
-  }
-
-  /* --- hours, the conversational bit --- */
-  await typing(600);
-  if (p.hours?.prose) {
-    // We only looked up the anchor store, so don't claim it speaks for all 44.
-    say(locs.length === 1
-      ? `Google has you open <strong>${escapeHtml(p.hours.prose)}</strong>.`
-      : `Google has your ${escapeHtml(cities[0])} store open <strong>${escapeHtml(p.hours.prose)}</strong>. We'll pull the rest per location once you're in.`);
-  } else {
-    say('Google doesn\'t have hours listed for you, so we\'ll leave those blank — you can set them once you\'re in.');
-  }
-
-  /* --- contact --- */
-  const bits = [];
-  if (p.phone?.value) bits.push(`your phone as ${escapeHtml(p.phone.value)}`);
-  if (p.website?.value) bits.push(`your site as ${escapeHtml(p.website.value.replace(/^https?:\/\//, ''))}`);
-  if (bits.length) {
-    await typing(450);
-    let line = `It's got ${bits.join(' and ')}`;
-    if (p.rating?.value) line += `, sitting at ${p.rating.value} stars across ${p.rating.count} reviews`;
-    say(line + '.');
-  }
-
-  /* --- POS --- */
-  const verified = (p.stack || []).filter(s => s.source === 'verified');
-  const detected = (p.stack || []).filter(s => s.source === 'detected');
-  if (verified.length || detected.length) {
-    await typing(550);
-    if (verified.length) {
-      say(`You're on <strong>${escapeHtml(verified.map(v => v.label).join(' and '))}</strong> — we're already integrated with that, so stock and pricing sync from day one.`);
-    } else {
-      say(`Your site looks like it's running <strong>${escapeHtml(detected.slice(0, 2).map(d => d.label).join(' and '))}</strong>. We'll confirm that properly during setup.`);
-    }
-  } else {
-    await typing(500);
-    say('I couldn\'t tell what POS you\'re running from your site — we\'ll sort that out on the setup call.');
-  }
-
-  /* --- the editability promise --- */
-  await typing(500);
-  say('Everything above lives in your admin panel once you\'re in, so nothing here is permanent — change hours, addresses, contact details, any of it, any time.');
-
-  await typing(400);
-  say('Does it look right as a starting point?');
-
-  const choice = await control((el, done) => {
-    el.innerHTML = `
-      <div class="btn-row">
-        <button class="btn btn-primary" type="button" data-v="yes">Yes, that's us</button>
-        <button class="btn btn-ghost" type="button" data-v="fix">Something's off</button>
-      </div>`;
-    el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => done(b.dataset.v)));
-  });
-
-  if (choice === 'yes') { reply("Yes, that's us"); return; }
-
-  reply("Something's off");
-  await typing(450);
-  say('No problem. Fix what\'s wrong and leave the rest — and remember you can change all of this later anyway.');
-  await manualCorrections();
-}
-
-async function manualCorrections() {
-  const edits = await control((el, done) => {
-    const p = state.profile;
-    el.innerHTML = `
-      <div class="control-label">Corrections</div>
-      <div class="field" style="margin-bottom:10px">
-        <input type="text" id="eName" placeholder="Store name" value="${escapeHtml(p.storeName?.value || '')}" aria-label="Store name">
-      </div>
-      <div class="field" style="margin-bottom:10px">
-        <input type="text" id="eAddr" placeholder="Street address" value="${escapeHtml(p.address?.value || '')}" aria-label="Address">
-      </div>
-      <div class="field-row" style="margin-bottom:10px">
-        <div class="field"><input type="text" id="eLicence" placeholder="AGCO licence (CRSA…)" value="${escapeHtml(p.licenceNumber?.value || '')}" aria-label="Licence number"></div>
-        <div class="field"><input type="tel" id="ePhone" placeholder="Store phone" value="${escapeHtml(p.phone?.value || '')}" aria-label="Store phone"></div>
-      </div>
-      <div class="field">
-        <input type="url" id="eSite" placeholder="Website" value="${escapeHtml(p.website?.value || '')}" aria-label="Website">
-      </div>
-      <div class="btn-row"><button class="btn btn-primary" type="button">Save corrections</button></div>`;
-
-    el.querySelector('button').addEventListener('click', () => done({
-      storeName: el.querySelector('#eName').value.trim(),
-      address: el.querySelector('#eAddr').value.trim(),
-      licenceNumber: el.querySelector('#eLicence').value.trim(),
-      phone: el.querySelector('#ePhone').value.trim(),
-      website: el.querySelector('#eSite').value.trim()
-    }));
-  });
-
-  for (const [k, v] of Object.entries(edits)) {
-    if (v && v !== state.profile[k]?.value) state.profile[k] = { value: v, source: 'you', editable: true };
-  }
-  renderRecord();
-  reply('Updated');
-  await typing(400);
-  say('Got it — record updated.');
-}
-
-/* --- ACT 2: what's missing, and what it costs --- */
-
-/**
- * The only place in the flow that sells. It runs straight after the readback,
- * at peak goodwill, and it discloses the price here rather than at the card —
- * a fee that first appears on the payment screen reads as a bait-and-switch
- * even when it isn't one.
- */
-async function valueBeat() {
-  const p = state.profile;
-  const locs = p?.locations || [];
-  const city = locs[0]?.name || 'your area';
-  const n = locs.length || 1;
-
-  await typing(650);
-  say(`So here's where you stand today.`);
-
-  await typing(600);
-  say(`Poof does around <strong>30,000 marketplace views a month</strong>. When someone in ${escapeHtml(city)} searches for what you carry, your store shows up — name and address, nothing else. They can't see your menu, can't check stock, can't order.`);
-
-  await typing(650);
-  say(`Turning on the <strong>Retail Ad Network</strong> connects your POS, so your live inventory and prices appear, and brand-funded campaigns start routing those shoppers to your checkout instead of someone else's.`);
-
-  await typing(500);
-  const monthly = n * 50;
-  say(`It's <strong>$50 per location, per month</strong>${n > 1 ? ` — $${monthly} for your ${n} stores` : ''}, plus HST. That covers what it costs us to build and hold open the connection to your POS — the integration itself, the stock and price sync, and the routing of every order into your system. No revenue share, and no cut of the orders we send you.`);
-
-  await control((el, done) => {
-    el.innerHTML = `
-      <div class="valueprops">
-        <div class="vp"><span class="vp-dot" style="background:var(--magenta)"></span><div><b>Brands pay for the traffic</b><span>Campaigns are funded by the brand. The $50 covers your POS connection.</span></div></div>
-        <div class="vp"><span class="vp-dot" style="background:var(--violet)"></span><div><b>Orders land in your POS</b><span>Fulfilled by your staff, on your licence, at your prices.</span></div></div>
-        <div class="vp"><span class="vp-dot" style="background:var(--verified-fill)"></span><div><b>Nothing charged until you're live</b><span>You'll speak to our team and approve before the first invoice.</span></div></div>
-        <div class="vp"><span class="vp-dot" style="background:var(--blue)"></span><div><b>Month to month</b><span>Cancel any time on 30 days' notice. No minimum term, no lock-in.</span></div></div>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" type="button" data-v="go">Sounds good — keep going</button>
-        <button class="btn btn-ghost" type="button" data-v="q">I have a question first</button>
-      </div>`;
-    el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => done(b.dataset.v)));
-  }).then(async v => {
-    if (v === 'go') { reply('Sounds good'); return; }
-    reply('I have a question first');
-    await typing(420);
-    say('Ask away — type it here and it goes straight to the person who\'ll be looking after your account. You can carry on either way, nothing is committed yet.');
-    const q = await askText('Your question', 'e.g. how long does the POS connection take?');
-    if (q) { state.question = q; reply(q); await typing(400); say('Got it — that\'ll be waiting for them. Let\'s carry on.'); }
-  });
-}
-
-/* --- step 3b: which location are we setting up --- */
-
-async function confirmLocation() {
-  const locs = state.profile?.locations || [];
-
-  if (locs.length <= 1) {
-    state.confirmedLocations = locs;
-  } else {
-    // If they searched by licence, address or postal code we already know which
-    // store they mean. Confirm that one rather than making them find it again.
-    const preselected = locs.filter(l => state.locationIds.includes(l.id));
-    let choice = 'pick';
-
-    if (preselected.length && preselected.length < locs.length) {
-      await typing(500);
-      const one = preselected.length === 1;
-      say(`That looks like your <strong>${escapeHtml(preselected.map(l => l.name).join(', '))}</strong> ${one ? 'store' : 'stores'}. Setting up ${one ? 'that one' : 'those'}, or all ${locs.length}?`);
-      choice = await control((el, done) => {
-        el.innerHTML = `
-          <div class="btn-row">
-            <button class="btn btn-primary" type="button" data-v="one">Just ${escapeHtml(preselected.map(l => l.name).join(', '))}</button>
-            <button class="btn btn-ghost" type="button" data-v="all">All ${locs.length}</button>
-            <button class="btn btn-ghost" type="button" data-v="pick">Let me choose</button>
-          </div>`;
-        el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => done(b.dataset.v)));
-      });
-      if (choice === 'one') { state.confirmedLocations = preselected; reply(preselected.map(l => l.name).join(', ')); }
-      else if (choice === 'all') { state.confirmedLocations = locs; reply(`All ${locs.length}`); }
-      else reply('Let me choose');
-    }
-
-    if (!state.confirmedLocations.length) {
-      await typing(500);
-      say(`Which of the ${locs.length} are we setting up? Most operators start with one and add the rest once they've seen it working.`);
-      const picked = await locationPicker(locs);
-      state.confirmedLocations = picked;
-      reply(picked.length === locs.length ? `All ${locs.length}` : picked.map(l => l.name).join(', '));
-    }
-  }
-
-  renderRecord();
-  await offerMoreLocations();
-}
-
-/** Multi-select over one banner's locations. */
-function locationPicker(locs) {
-  return control((el, done) => {
-    const shown = locs.slice(0, 40);
-    el.innerHTML = `
-      <div class="control-label">Locations</div>
-      <div class="options options-scroll">
-        ${shown.map((l, i) => `
-          <button class="option" type="button" aria-pressed="false" data-i="${i}">
-            <span class="option-mark" aria-hidden="true"></span>
-            <span><span class="option-title">${escapeHtml(l.name)}</span><span class="option-sub">${escapeHtml(l.address || '')}</span></span>
-          </button>`).join('')}
-      </div>
-      ${locs.length > shown.length ? `<p class="fineprint">Showing the first ${shown.length}. You can add the rest from your admin panel.</p>` : ''}
-      <div class="btn-row">
-        <button class="btn btn-primary" type="button" id="locGo" disabled>Continue</button>
-        <button class="btn btn-ghost" type="button" id="locAll">All ${locs.length}</button>
-      </div>`;
-    const go = el.querySelector('#locGo');
-    const chosen = new Set();
-    el.querySelectorAll('.option').forEach(b => b.addEventListener('click', () => {
-      const on = b.getAttribute('aria-pressed') === 'true';
-      b.setAttribute('aria-pressed', String(!on));
-      on ? chosen.delete(+b.dataset.i) : chosen.add(+b.dataset.i);
-      go.disabled = chosen.size === 0;
-    }));
-    go.addEventListener('click', () => done([...chosen].map(i => shown[i])));
-    el.querySelector('#locAll').addEventListener('click', () => done(locs));
-  });
-}
-
-/**
- * Lets an operator add stores beyond the ones already chosen — including stores
- * trading under a different name, which is common for independents who run two
- * or three shops that were never branded as a chain.
- */
-async function offerMoreLocations() {
-  while (true) {
-    const inBanner = (state.profile?.locations || [])
-      .filter(l => !state.confirmedLocations.some(c => c.id === l.id));
-
-    await typing(420);
-    const n = state.confirmedLocations.length;
-    say(`That's ${n} ${n === 1 ? 'store' : 'stores'} on the list. Anything else to add?`);
-
-    const choice = await control((el, done) => {
-      el.innerHTML = `
-        <div class="btn-row">
-          <button class="btn btn-primary" type="button" data-v="no">No, that's everything</button>
-          ${inBanner.length ? `<button class="btn btn-ghost" type="button" data-v="same">Add another ${escapeHtml(state.profile.storeName.value)}</button>` : ''}
-          <button class="btn btn-ghost" type="button" data-v="other">Add a store under a different name</button>
-        </div>`;
-      el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => done(b.dataset.v)));
-    });
-
-    if (choice === 'no') { reply("No, that's everything"); return; }
-
-    if (choice === 'same') {
-      reply('Add another location');
-      await typing(350);
-      say('Which ones?');
-      const more = await locationPicker(inBanner);
-      state.confirmedLocations = [...state.confirmedLocations, ...more];
-      renderRecord();
-      reply(more.map(l => l.name).join(', '));
-      continue;
-    }
-
-    reply('Add a store under a different name');
-    await typing(400);
-    say('What\'s it called? Name, address or CRSA number again.');
-
-    const picked = await storeSearchControl(
-      'Additional store',
-      'Store name, address, or CRSA number',
-      state.confirmedLocations.map(l => l.id)
-    );
-    reply(picked.name);
-
-    await typing(400);
-    const note = say('Looking that one up…');
-    try {
-      const qs = new URLSearchParams({ name: picked.name });
-      if (picked.bannerId) qs.set('bannerId', picked.bannerId);
-      const { profile } = await api(`/api/lookup?${qs}`);
-      const chosen = new Set(state.confirmedLocations.map(l => l.id));
-      const found = (profile.locations || []).filter(l => !chosen.has(l.id));
-      note.remove();
-
-      if (!found.length) {
-        await typing(300);
-        say((profile.locations || []).length
-          ? 'Looks like those are already on your list.'
-          : 'I couldn\'t find that one in the register. We\'ll add it manually on the setup call.');
-        continue;
-      }
-
-      let toAdd = found;
-      if (found.length > 1) {
-        await typing(350);
-        say(`<strong>${escapeHtml(profile.storeName.value)}</strong> has ${found.length} locations. Which of those?`);
-        toAdd = await locationPicker(found);
-      }
-
-      const existing = new Set(state.confirmedLocations.map(l => l.id));
-      const fresh = toAdd.filter(l => !existing.has(l.id));
-      state.confirmedLocations = [...state.confirmedLocations, ...fresh];
-      if (picked.bannerId && !state.bannerIds.includes(picked.bannerId)) {
-        state.bannerIds.push(picked.bannerId);
-      }
-      // Keep the master location list in step, so the picker and map see them.
-      for (const l of fresh) {
-        if (!state.profile.locations.some(x => x.id === l.id)) state.profile.locations.push(l);
-      }
-
-      // Merge any newly-verified POS into the record.
-      for (const s of (profile.stack || [])) {
-        if (!state.profile.stack.some(x => x.id === s.id)) state.profile.stack.push(s);
-      }
-      renderRecord();
-      reply(fresh.map(l => l.name).join(', ') || 'Already on the list');
-    } catch {
-      note.remove();
-      await typing(300);
-      say('That lookup didn\'t come back. We\'ll add it on the setup call.');
-    }
-  }
-}
-
-/* --- ACT 3: the stack, in one exchange --- */
-
-const POS_OPTIONS = [['cova', 'Cova'], ['greenline', 'Greenline'], ['other', 'Other']];
-const PAYMENT_OPTIONS = [
-  ['merrco', 'Merrco'], ['moneris', 'Moneris'],
-  ['blazepay', 'BlazePay'], ['covapay', 'CovaPay'], ['other', 'Other']
-];
-const ECOM_OPTIONS = [
-  ['buddi', 'Buddi'], ['dutchie', 'Dutchie'], ['breadstack', 'Breadstack'],
-  ['none', 'Just our POS menu'], ['other', 'Other']
-];
-
-const DELIVERY_OPTIONS = [
-  ['canfleet', 'Canfleet'],
-  ['onfleet', 'Onfleet'],
-  ['other', 'Something else'],
-  ['in_house', 'In-house (no software)']
-];
-
-const label = (list, id, other) => {
-  if (!id) return null;
-  if (id === 'other' && other) return other;
-  return (list.find(o => o[0] === id) || [])[1] || id;
-};
-const posLabel  = () => label(POS_OPTIONS, state.stack.pos, state.stack.posOther);
-const payLabel  = () => label(PAYMENT_OPTIONS, state.stack.payment, state.stack.paymentOther);
-const ecomLabel = () => label(ECOM_OPTIONS, state.stack.ecommerce, state.stack.ecommerceOther);
-const delLabel  = () => label(DELIVERY_OPTIONS, state.stack.deliverySoftware, state.stack.deliveryOther);
-
-/**
- * POS, processor and e-commerce on one screen instead of three back-to-back
- * questions. Same data, roughly half the perceived length — this is the stretch
- * where the retailer gives the most and gets the least, so it should be short.
- */
-async function askStack() {
-  await typing(600);
-  say('Now the practical bit — what are you running?');
-
-  const answers = await control((el, done) => {
-    const group = (id, label, opts) => `
-      <div class="stack-group">
-        <div class="control-label">${label}</div>
-        <div class="chipset" data-group="${id}">
-          ${opts.map(([v, l]) => `<button class="chipbtn" type="button" data-v="${v}">${l}</button>`).join('')}
-        </div>
-        <div class="field chip-other" id="other-${id}" hidden>
-          <input type="text" placeholder="Which one?" aria-label="${label} — other">
-        </div>
-      </div>`;
-
-    el.innerHTML = `
-      ${group('pos', 'Point of sale', POS_OPTIONS)}
-      ${group('pay', 'Payment processor', PAYMENT_OPTIONS)}
-      ${group('ecom', 'E-commerce', ECOM_OPTIONS)}
-      <div class="btn-row"><button class="btn btn-primary" type="button" id="stackGo" disabled>Continue</button></div>`;
-
-    const picked = {};
-    const go = el.querySelector('#stackGo');
-    const check = () => { go.disabled = !(picked.pos && picked.pay && picked.ecom); };
-
-    el.querySelectorAll('.chipset').forEach(set => {
-      set.addEventListener('click', e => {
-        const b = e.target.closest('.chipbtn');
-        if (!b) return;
-        set.querySelectorAll('.chipbtn').forEach(x => x.classList.remove('on'));
-        b.classList.add('on');
-        const id = set.dataset.group;
-        picked[id] = b.dataset.v;
-        const other = el.querySelector(`#other-${id}`);
-        other.hidden = b.dataset.v !== 'other';
-        if (!other.hidden) other.querySelector('input').focus();
-        check();
-      });
-    });
-
-    go.addEventListener('click', () => done({
-      pos: picked.pos,
-      posOther: el.querySelector('#other-pos input').value.trim() || null,
-      payment: picked.pay,
-      paymentOther: el.querySelector('#other-pay input').value.trim() || null,
-      ecommerce: picked.ecom,
-      ecommerceOther: el.querySelector('#other-ecom input').value.trim() || null
-    }));
-  });
-
-  Object.assign(state.stack, answers);
-  renderRecord();
-  reply([posLabel(), payLabel(), ecomLabel()].filter(Boolean).join(' · '));
-
-  const verified = (state.profile?.stack || []).filter(s => s.source === 'verified');
-  await typing(450);
-  if (verified.length && (state.stack.pos === 'greenline' || state.stack.pos === 'cova')) {
-    say(`Perfect — we're already integrated with ${escapeHtml(posLabel())}, so your stock and pricing sync from day one.`);
-  } else if (state.stack.pos === 'greenline' || state.stack.pos === 'cova') {
-    say(`Good — ${escapeHtml(posLabel())} is one we connect to directly. That part's straightforward.`);
-  } else {
-    say('Noted — we\'ll confirm what that connection looks like during setup.');
-  }
-}
-
-/* --- delivery --- */
-
-async function askDelivery() {
-  await typing(550);
-  say('Do you offer delivery?');
-
-  state.stack.delivers = await yesNo('Yes', 'No');
-  reply(state.stack.delivers ? 'Yes' : 'No');
-
-  if (!state.stack.delivers) {
-    await typing(430);
-    say('Would you like to?');
-    state.stack.wantsDelivery = await yesNo('Yes, we\'re interested', 'Not right now');
-    reply(state.stack.wantsDelivery ? "Yes, we're interested" : 'Not right now');
-
-    await typing(400);
-    say(state.stack.wantsDelivery
-      ? 'Noted — we\'ll flag your account. Delivery routing is on our roadmap and we\'ll come to you first when it\'s ready.'
-      : 'No problem — pickup orders route to you exactly the same way.');
-    renderRecord();
-    return;
-  }
-
-  await typing(500);
-  say('What do you use for your last-mile delivery software?');
-
-  const answer = await control((el, done) => {
-    el.innerHTML = `
-      <div class="chipset" id="delSet">
-        ${DELIVERY_OPTIONS.map(([v, l]) => `<button class="chipbtn" type="button" data-v="${v}">${l}</button>`).join('')}
-      </div>
-      <div id="delOther" hidden>
-        <div class="field" style="margin-top:12px">
-          <input type="text" id="delFree" placeholder="Which one? Or just describe it…" aria-label="Delivery software">
-        </div>
-        <div class="btn-row"><button class="btn btn-primary" type="button" id="delGo">Continue</button></div>
-      </div>`;
-
-    const other = el.querySelector('#delOther');
-    const input = el.querySelector('#delFree');
-
-    el.querySelector('#delSet').addEventListener('click', e => {
-      const b = e.target.closest('.chipbtn');
-      if (!b) return;
-      // "Something else" opens the box; every other chip answers immediately.
-      if (b.dataset.v === 'other') {
-        el.querySelectorAll('.chipbtn').forEach(x => x.classList.remove('on'));
-        b.classList.add('on');
-        other.hidden = false;
-        input.focus();
-        return;
-      }
-      done({ id: b.dataset.v, text: null });
-    });
-
-    const submit = () => {
-      const v = input.value.trim();
-      if (v) done({ id: matchDelivery(v), text: v });
-    };
-    el.querySelector('#delGo').addEventListener('click', submit);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
-  });
-
-  state.stack.deliverySoftware = answer.id;
-  if (answer.id === 'other') state.stack.deliveryOther = answer.text;
-  reply(answer.text || delLabel());
-  renderRecord();
-
-  await typing(420);
-  if (answer.id === 'canfleet' || answer.id === 'onfleet') {
-    say(`We work with ${escapeHtml(delLabel())} directly — we'll arrange access with them during setup.`);
-  } else if (answer.id === 'in_house') {
-    say('Noted. Delivery orders will land in your POS for your own drivers.');
-  } else {
-    say('Noted — we\'ll look at whether we can connect to that during setup.');
-  }
-}
-
-/** Light matching so free text still lands on a known vendor. */
-function matchDelivery(text) {
-  const s = text.toLowerCase();
-  if (/can\s*fleet/.test(s)) return 'canfleet';
-  if (/on\s*fleet/.test(s)) return 'onfleet';
-  if (/in[- ]?house|our own|ourselves|own driver|no software|manual/.test(s)) return 'in_house';
-  return 'other';
-}
-
-/* --- small reusable controls --- */
-
-function pickOne(labelText, options) {
-  return control((el, done) => {
-    el.innerHTML = `
-      <div class="control-label">${labelText}</div>
-      <div class="options">
-        ${options.map(([id, lab]) => `
-          <button class="option option-inline" type="button" data-id="${id}">
-            <span class="option-title">${lab}</span>
-          </button>`).join('')}
-      </div>`;
-    el.querySelectorAll('.option').forEach(b =>
-      b.addEventListener('click', () => done(b.dataset.id)));
-  });
-}
-
-function yesNo(yesLabel = 'Yes', noLabel = 'No') {
-  return control((el, done) => {
-    el.innerHTML = `
-      <div class="btn-row">
-        <button class="btn btn-primary" type="button" data-v="1">${yesLabel}</button>
-        <button class="btn btn-ghost" type="button" data-v="">${noLabel}</button>
-      </div>`;
-    el.querySelectorAll('button').forEach(b =>
-      b.addEventListener('click', () => done(!!b.dataset.v)));
-  });
-}
-
-function askText(labelText, placeholder) {
-  return control((el, done) => {
-    el.innerHTML = `
-      <div class="control-label">${labelText}</div>
-      <div class="field"><input type="text" id="txt" placeholder="${placeholder}" aria-label="${labelText}"></div>
-      <div class="btn-row"><button class="btn btn-primary" type="button">Continue</button></div>`;
-    const input = el.querySelector('#txt');
-    input.focus();
-    const submit = () => done(input.value.trim() || null);
-    el.querySelector('button').addEventListener('click', submit);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
-  });
-}
-
-/* --- step 5: referral --- */
-
-async function askReferral() {
-  await typing(550);
-  say('Last thing before setup — did a brand refer you? If so their code gets you <strong>three months on us</strong>.');
-
-  const has = await control((el, done) => {
-    el.innerHTML = `
-      <div class="btn-row">
-        <button class="btn btn-primary" type="button" data-v="yes">I have a code</button>
-        <button class="btn btn-ghost" type="button" data-v="no">No code</button>
-      </div>`;
-    el.querySelectorAll('button').forEach(b =>
-      b.addEventListener('click', () => done(b.dataset.v === 'yes')));
-  });
-
-  if (!has) {
-    reply('No code');
-    await typing(450);
-    say('No problem — most stores come to us directly rather than through a brand.');
-    await wait(240);
-    say('And nothing\'s charged until you\'re live, so there\'s no clock running on your side either way.');
-    await wait(240);
-    say('If a brand you stock does have a code, mention it to your account manager on the call — we can still apply it. The three months start at go-live, not today.');
-    return;
-  }
-  reply('I have a code');
-
   await typing(350);
-  say('Go ahead.');
+  say('Let\'s turn that on. Takes about two minutes, and we\'ll fill in most of it for you.');
+  await buttons([['Get started', true]]);
+  return storeSearch();
+}
 
-  state.referralCode = await control((el, done) => {
-    el.innerHTML = `
-      <div class="control-label">Brand referral code</div>
-      <div class="field"><input type="text" id="refInput" placeholder="e.g. BUZZD" style="text-transform:uppercase;font-family:var(--mono)" aria-label="Referral code"></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" type="button" id="refGo">Apply code</button>
-        <button class="btn btn-ghost" type="button" id="refSkip">Skip</button>
-      </div>`;
-    const input = el.querySelector('#refInput');
-    input.focus();
-    el.querySelector('#refGo').addEventListener('click', () => done(input.value.trim().toUpperCase() || null));
-    el.querySelector('#refSkip').addEventListener('click', () => done(null));
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') done(input.value.trim().toUpperCase() || null); });
+// Personal link: /s/CRSA1234567
+async function landing(data){
+  setStep(0); FAST = true; track('onb_view', { entry: 'link' });
+  S.chain = data; S.entryStoreId = data.entry.id; S.selected = [data.entry.id]; S.extraChains = []; S.groups = []; S.overrides = {};
+  renderRecord();
+  $('h1').textContent = `${titleCase(data.entry.name)} is already on Poof.`;
+  say(`Hi — this is <b>${esc(titleCase(data.entry.name))}</b> at ${esc(titleCase(data.entry.addr))}, ${esc(data.entry.city)}. AGCO status: <b>Authorized to Open</b>.`);
+  await typing(200);
+  say('Shoppers can already find this store on the Poof marketplace. They just can\'t buy from it yet. That you?');
+  const yes = await buttons([['Yes, that\'s my store', true], ['Not my store', false, true]]);
+  if (!yes) { S.chain = null; S.entryStoreId = null; S.selected = []; renderRecord(); FAST = false; return storeSearch(); }
+  track('onb_store_confirmed');
+  return captureEmail();
+}
+
+async function storeSearch(extra){
+  setStep(0);
+  await typing(300);
+  say(extra ? 'What\'s the other store called?' : 'What\'s your store called? You can also search by address, postal code or CRSA licence number.');
+  const chain = await control((el, done) => {
+    el.innerHTML = `<div class="lbl">Store name</div><input class="in" id="q" placeholder="Store name, address, postal code or CRSA number" autocomplete="off"><div class="dd" id="dd" style="display:none"></div>`;
+    const q = el.querySelector('#q'), dd = el.querySelector('#dd'); let t, results = [], cursor = -1;
+    async function run(){
+      const v = q.value.trim(); if (v.length < 2) { dd.style.display = 'none'; return; }
+      const r = await fetch('/api/lookup?q=' + encodeURIComponent(v)).then(r => r.json()).catch(() => ({ results: [] }));
+      results = r.results || []; cursor = -1; dd.style.display = 'block';
+      dd.innerHTML = results.length ? results.map((c, i) => `<div class="it" data-i="${i}"><span><b>${esc(c.name)}</b><br><small>${esc(c.sample.join(', '))}${c.count > 3 ? ' and more' : ''}</small></span><small>${c.count} ${plural(c.count, 'location', 'locations')}</small></div>`).join('')
+        : `<div class="empty">No authorized-to-open store matches "${esc(v)}". Only stores the AGCO has authorized to open can join right now.<br><a href="#" id="waitlist">Not on the list? Leave your details</a> and we'll reach out the day you're authorized.</div>`;
+      dd.querySelectorAll('.it').forEach(it => it.onclick = () => pick(results[+it.dataset.i]));
+      const w = dd.querySelector('#waitlist'); if (w) w.onclick = (e) => { e.preventDefault(); done({ waitlist: v }); };
+    }
+    async function pick(c){ if (!c) return; if (extra && S.chain && c.slug === S.chain.slug) return; me(c.name); const full = await fetch(`/api/lookup?chain=${encodeURIComponent(c.slug)}&places=1`).then(r => r.json()); done(full); }
+    q.oninput = () => { clearTimeout(t); t = setTimeout(run, 160); };
+    q.onkeydown = (e) => { const its = dd.querySelectorAll('.it'); if (e.key === 'ArrowDown') cursor = Math.min(cursor + 1, its.length - 1); else if (e.key === 'ArrowUp') cursor = Math.max(cursor - 1, 0); else if (e.key === 'Enter') { e.preventDefault(); pick(results[cursor >= 0 ? cursor : 0]); return; } else return; its.forEach((x, i) => x.classList.toggle('on', i === cursor)); };
+    setTimeout(() => q.focus(), 50);
   });
-
-  if (state.referralCode) {
-    reply(state.referralCode);
-    renderRecord();
+  if (chain.waitlist) return waitlist(chain.waitlist);
+  if (extra) {
+    if (!S.extraChains.find(c => c.slug === chain.slug)) S.extraChains.push(chain);
+    chain.stores.forEach(s => { if (!S.selected.includes(s.id)) S.selected.push(s.id); });
+    renderRecord(); save();
+    await typing(250); say(`Added <b>${esc(chain.name)}</b> — ${chain.count} ${plural(chain.count, 'location', 'locations')}. Untick any you don't want below.`);
+    return locations(true);
   }
+  S.chain = chain; S.extraChains = []; S.selected = []; S.groups = []; S.overrides = {}; S.entryStoreId = null;
+  renderRecord(); save();
+  return confirmStore();
 }
 
-/* --- step 6: contact --- */
-
-async function askContact() {
-  await typing(600);
-  say('Who should we set up as the account owner?');
-
-  const contact = await control((el, done) => {
-    el.innerHTML = `
-      <div class="control-label">Account owner</div>
-      <div class="field" style="margin-bottom:10px">
-        <input type="text" id="cName" placeholder="Full name" autocomplete="name" aria-label="Full name">
-      </div>
-      <div class="field-row">
-        <div class="field"><input type="email" id="cEmail" placeholder="Work email" autocomplete="email" aria-label="Work email"></div>
-        <div class="field"><input type="tel" id="cPhone" placeholder="Mobile (optional)" autocomplete="tel" aria-label="Mobile"></div>
-      </div>
-      <div id="cErr"></div>
-      <div class="btn-row"><button class="btn btn-primary" type="button" id="cGo">Continue</button></div>`;
-
-    const err = el.querySelector('#cErr');
-    el.querySelector('#cName').focus();
-
-    el.querySelector('#cGo').addEventListener('click', () => {
-      const name = el.querySelector('#cName').value.trim();
-      const email = el.querySelector('#cEmail').value.trim();
-      const phone = el.querySelector('#cPhone').value.trim();
-      if (!name) { err.innerHTML = '<div class="error">Add a name so we know who to reach.</div>'; return; }
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.innerHTML = '<div class="error">That email doesn\'t look right. Check the spelling.</div>'; return; }
-      done({ name, email, phone });
-    });
-  });
-
-  state.contact = contact;
-  reply(`${contact.name} · ${contact.email}`);
-}
-
-/* --- terms acceptance --- */
-
-const TERMS_URL = 'https://business.poof.ca/terms.html';
-
-const TERMS_VERSION = '2026-08-15';
-
-/**
- * Click-wrap acceptance. Schedule A is drafted to be accepted "by clicking a box
- * indicating acceptance", so this is the execution step — which is why it
- * captures who accepted, their title, and an explicit authority affirmation
- * rather than a bare checkbox.
- */
-async function acceptTerms() {
-  const locs = state.confirmedLocations?.length ? state.confirmedLocations : (state.profile.locations || []);
-  const n = locs.length || 1;
-
-  await typing(650);
-  say(`Before the card — the paperwork, in one step.`);
-  await wait(240);
-  say(`Accepting here covers all <strong>${n} ${n === 1 ? 'location' : 'locations'}</strong> you've added, and lets us contact ${escapeHtml(partnerList())} to set up your connection.`);
-  await wait(240);
-  say(`<strong>Nothing happens straight away.</strong> Your account manager will call you first to walk through exactly what to expect — and we won't contact ${escapeHtml(partnerList())} until after that call, with you copied on every message.`);
-  await wait(230);
-  say(`And it's <strong>month to month</strong> — you can cancel any time on 30 days' notice. No minimum term, no lock-in.`);
-
-  const accepted = await control((el, done) => {
-    el.innerHTML = `
-      <div class="terms">
-        <div class="reassure">
-          <div class="rz rz-lead"><span class="rz-tick">✓</span><span><b>Cancel any time, on 30 days' notice.</b> Month to month — no minimum term, no lock-in, no cancellation fee.</span></div>
-          <div class="rz"><span class="rz-tick">✓</span><span><b>No charge today.</b> Billing starts only once you're live and you've approved it.</span></div>
-          <div class="rz"><span class="rz-tick">✓</span><span><b>A call before anything moves.</b> Your account manager walks you through it before we contact anyone.</span></div>
-          <div class="rz"><span class="rz-tick">✓</span><span><b>You stay in the loop.</b> You're copied on every message we send your POS and payment providers.</span></div>
-        </div>
-
-        <label class="tickrow">
-          <input type="checkbox" id="tickTerms">
-          <span class="tickbox"></span>
-          <span class="ticktext">
-            I have read and agree to the
-            <a href="${TERMS_URL}" target="_blank" rel="noopener">Poof Dispensary Agreement, Terms and Conditions, and Payments Policy</a>,
-            on behalf of <strong>${escapeHtml(state.profile.storeName.value)}</strong> and each of the
-            ${n} ${n === 1 ? 'location' : 'locations'} listed above.
-          </span>
-        </label>
-
-        <label class="tickrow">
-          <input type="checkbox" id="tickAuth">
-          <span class="tickbox"></span>
-          <span class="ticktext">
-            I am authorised to enter into this agreement on behalf of the business, and I authorise
-            Poof to contact our POS, payment and delivery providers to set up the integration.
-          </span>
-        </label>
-
-        <div class="field-row" style="margin-top:14px">
-          <div class="field"><input type="text" id="signName" placeholder="Your full name" autocomplete="name" aria-label="Full name"></div>
-          <div class="field"><input type="text" id="signTitle" placeholder="Your title (e.g. Owner)" aria-label="Title"></div>
-        </div>
-        <div id="termsErr"></div>
-        <div class="btn-row"><button class="btn btn-primary" type="button" id="termsGo">Agree and continue</button></div>
-      </div>`;
-
-    const err = el.querySelector('#termsErr');
-    el.querySelector('#termsGo').addEventListener('click', () => {
-      const t1 = el.querySelector('#tickTerms').checked;
-      const t2 = el.querySelector('#tickAuth').checked;
-      const name = el.querySelector('#signName').value.trim();
-      const title = el.querySelector('#signTitle').value.trim();
-      if (!t1 || !t2) { err.innerHTML = '<div class="error">Both boxes need ticking before we can continue.</div>'; return; }
-      if (!name || !title) { err.innerHTML = '<div class="error">Add your name and title — they go on the order form.</div>'; return; }
-      done({ name, title });
-    });
-  });
-
-  // The evidentiary record. Server adds IP, user agent and a hash of the terms text.
-  state.acceptance = {
-    acceptedBy: accepted.name,
-    acceptedTitle: accepted.title,
-    acceptedEmail: state.contact.email,
-    acceptedAt: new Date().toISOString(),
-    termsVersion: TERMS_VERSION,
-    termsUrl: TERMS_URL,
-    locationIds: locs.map(l => l.id),
-    locationCount: locs.length,
-    authorityAffirmed: true
-  };
-
-  reply(`${accepted.name}, ${accepted.title}`);
-  await typing(420);
-  say('Recorded — that\'s your signature on the order form, and we\'ll email you a copy with all your locations listed.');
-  await wait(230);
-  say('Your account manager will be in touch within one business day to go through it with you before anything else happens.');
-}
-
-/** The partners we'll need to contact, in their own words. */
-function partnerList() {
-  const names = [posLabel(), payLabel()];
-  if (state.stack.ecommerce && state.stack.ecommerce !== 'none') names.push(ecomLabel());
-  if (state.stack.delivers && state.stack.deliverySoftware !== 'in_house') names.push(delLabel());
-  const clean = [...new Set(names.filter(Boolean))];
-  return clean.length > 1
-    ? clean.slice(0, -1).join(', ') + ' and ' + clean[clean.length - 1]
-    : clean[0] || 'your providers';
-}
-
-/* --- step 8: summary --- */
-
-async function showSummary() {
-  await typing(700);
-  say('Excellent — here\'s a summary of what we have for your store.');
-
-  const p = state.profile;
-  const locs = state.confirmedLocations?.length ? state.confirmedLocations : (p.locations || []);
-
-  const lines = [
-    ['Store', p.storeName?.value],
-    ['Locations', locs.length === 1
-      ? locs[0].address
-      : `${locs.length} locations — ${[...new Set(locs.map(l => l.name))].slice(0, 4).join(', ')}${locs.length > 4 ? '…' : ''}`],
-    ['AGCO licence', locs.length === 1 ? p.licenceNumber?.value : `${locs.length} licences on file`],
-    ['Hours', p.hours?.prose],
-    ['Point of sale', posLabel()],
-    ['Payment processor', payLabel()],
-    ['E-commerce', ecomLabel()],
-    ['Delivery', state.stack.delivers
-      ? `Yes — ${delLabel() || 'software to confirm'}`
-      : state.stack.wantsDelivery ? 'Not yet — interested in offering it' : 'No'],
-    ['Retail Ad Network', `${locs.length} × $50.00 = $${(locs.length * 50).toFixed(2)}/mo + HST`],
-    ['Account owner', [state.contact.name, state.contact.email].filter(Boolean).join(' · ')],
-    ['Referral', state.referralCode ? `${state.referralCode} — 3 months credit` : null]
-  ].filter(([, v]) => v);
-
+async function waitlist(typed){
+  track('onb_waitlist');
+  await typing(250);
+  say('No problem — leave your details and we\'ll reach out the day the AGCO authorizes you. No charge, no commitment.');
   await control((el, done) => {
-    el.innerHTML = `
-      <div class="summary">
-        ${lines.map(([k, v]) => `
-          <div class="summary-row">
-            <div class="summary-key">${escapeHtml(k)}</div>
-            <div class="summary-val">${escapeHtml(String(v))}</div>
-          </div>`).join('')}
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" type="button" data-v="ok">Looks right</button>
-        <button class="btn btn-ghost" type="button" data-v="fix">Change something</button>
-      </div>`;
-    el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => done(b.dataset.v)));
-  }).then(async v => {
-    if (v === 'ok') { reply('Looks right'); return; }
-    reply('Change something');
-    await typing(400);
-    say('No problem — tell us what to change and we\'ll fix it on the setup call. Nothing here is locked in, and it\'s all editable in your admin panel once you\'re in.');
-    await askText('What should we change?', 'e.g. our Sarnia hours are wrong')
-      .then(note => { if (note) { state.note = note; reply(note); } });
-    await typing(400);
-    say('Got it, we\'ll pick that up with you.');
+    el.innerHTML = `<div class="lbl">Your details</div><input class="in" id="wStore" placeholder="Store name" value="${esc(typed)}"><div class="row2" style="margin-top:10px"><input class="in" id="wName" placeholder="Your name"><input class="in" id="wEmail" type="email" placeholder="Email"></div><div class="actions"><button class="btn" id="go">Keep me posted</button></div>`;
+    const show = errBox(el);
+    el.querySelector('#go').onclick = async () => {
+      const email = el.querySelector('#wEmail').value.trim(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return show('That email doesn\'t look right.');
+      await fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, name: el.querySelector('#wName').value.trim(), stage: 'waitlist', storeName: el.querySelector('#wStore').value.trim(), note: 'Not on AGCO authorized list at signup' }) }).catch(() => {});
+      me(email); done(true);
+    };
   });
+  say('<span class="ok">✓</span> Got it. We\'ll be in touch. In the meantime, <a href="https://business.poof.ca/retailers">here\'s how Poof works for retailers</a>.');
 }
 
-/* --- step 7: payment --- */
-
-async function toPayment() {
-  await typing(700);
-  say('Last step — the card we\'ll have on file for when you go live.');
-  await wait(260);
-  say('Adding it now means that once you\'ve approved everything, we can launch the same day instead of stopping to chase payment details. It also tells us you\'re serious, so your setup goes to the front of the queue.');
-  await wait(260);
-  say('<strong>Nothing is charged today.</strong> You\'ll speak with our team, see your menu configured, and approve it — all before the first invoice. It stays <strong>month to month</strong>, cancel any time on 30 days\' notice. You\'d be joining <strong>80+ Ontario retailers</strong> already on the network.');
-
-  await control((el, done) => {
-    el.innerHTML = `
-      <div class="btn-row">
-        <button class="btn btn-primary btn-lg" type="button" id="payGo">Add card securely</button>
-      </div>
-      <div id="payErr"></div>
-      <p class="fineprint">Card details are entered on Stripe\'s own page — Poof never sees or stores your card number. We store the card now and charge it only once you\'re live.</p>`;
-
-    const go = el.querySelector('#payGo');
-    const err = el.querySelector('#payErr');
-
-    go.addEventListener('click', async () => {
-      go.disabled = true;
-      go.textContent = 'Opening Stripe…';
-      err.innerHTML = '';
-      try {
-        const data = await api('/api/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            profile: state.profile,
-            confirmedLocations: state.confirmedLocations,
-            goals: state.goals,
-            contact: state.contact,
-            stack: state.stack,
-            acceptance: state.acceptance,
-            referralCode: state.referralCode
-          })
-        });
-        if (data.mode === 'embedded' && data.clientSecret) {
-          done(true);
-          await mountStripe(data);
-          return;
-        }
-        if (data.url) { location.href = data.url; return; }   // hosted fallback
-        done(true);
-      } catch (e) {
-        err.innerHTML = `<div class="error">${escapeHtml(e.message)}</div>`;
-        go.disabled = false;
-        go.textContent = 'Add card securely';
-      }
+async function confirmStore(){
+  const c = S.chain, p = c.places || {}; const cities = [...new Set(c.stores.map(s => s.city))];
+  await typing(400);
+  say(`Here's what I've got. <b>${esc(c.name)}</b>, ${c.count} ${plural(c.count, 'location', 'locations')}${c.count > 1 ? ` across ${cities.length} ${plural(cities.length, 'city', 'cities')}` : ' in ' + esc(cities[0])}. AGCO status: <b>Authorized to Open</b>.`);
+  if (p.rating) { await typing(250); say(`Google has you at <b>${p.rating} ★</b> across ${p.ratings} reviews.`); }
+  await typing(250);
+  say('You can correct anything later in your admin panel. Does it look right as a starting point?');
+  const ok = await buttons([['Yes, that\'s us', true], ['Something\'s off', false, true]]);
+  if (!ok) {
+    await typing(250); say('Tell us what to fix. Leave anything blank to keep what\'s on record.');
+    const v = await control((el, done) => {
+      el.innerHTML = `<div class="lbl">Corrections</div><input class="in" id="oName" placeholder="Operating name (as customers know it)" value="${esc(S.overrides.name || '')}"><div class="row2" style="margin-top:10px"><input class="in" id="oPhone" placeholder="Phone" value="${esc(S.overrides.phone || '')}"><input class="in" id="oWeb" placeholder="Website" value="${esc(S.overrides.website || '')}"></div><div class="actions"><button class="btn" id="go">Save corrections</button><button class="btn ghost" id="wrong">That's not my store at all</button></div>`;
+      el.querySelector('#go').onclick = () => { S.overrides = { name: el.querySelector('#oName').value.trim(), phone: el.querySelector('#oPhone').value.trim(), website: el.querySelector('#oWeb').value.trim() }; renderRecord(); me('Corrections saved'); done(true); };
+      el.querySelector('#wrong').onclick = () => { me('That\'s not my store'); done(false); };
     });
-  });
+    if (!v) { S.chain = null; renderRecord(); return storeSearch(); }
+  }
+  track('onb_store_confirmed');
+  return captureEmail();
 }
 
-
-/**
- * Embedded Stripe Checkout — the card form mounts inside the thread rather
- * than redirecting away from it. Stripe renders in its own iframe, so card
- * data never touches this page or our servers.
- */
-async function mountStripe(session) {
-  const q = session.quote || {};
-  const sub = (q.subtotal || 0) / 100;
-  const hst = sub * 0.13;
-  const total = sub + hst;
-
-  await typing(450);
-  say('Opening the secure card form.');
-
-  const host = document.createElement('div');
-  host.className = 'controls';
-  host.innerHTML = `
-    <div class="quote">
-      <div class="qline"><span>$50.00 × ${q.locations || 1} location${(q.locations || 1) === 1 ? '' : 's'}</span><span>$${sub.toFixed(2)}</span></div>
-      <div class="qline"><span>HST (13%)</span><span>$${hst.toFixed(2)}</span></div>
-      ${q.rebateMonths ? `<div class="qline qline-credit"><span>Referral — first ${q.rebateMonths} months</span><span>−$${total.toFixed(2)}</span></div>` : ''}
-      <div class="qline qline-total"><span>Due today</span><span>$0.00</span></div>
-      <div class="qline qline-note">
-        <span>${q.rebateMonths ? `From month ${q.rebateMonths + 1}, once live` : 'Monthly, once live'}</span>
-        <span>$${total.toFixed(2)}</span>
-      </div>
-    </div>
-    <div id="stripeMount" class="stripe-mount"></div>
-    <p class="fineprint">Card details are entered directly with Stripe. Poof never sees or stores your card number. You won't be charged until you speak with a Poof representative and confirm your interest.</p>`;
-  thread.appendChild(host);
-  scrollDown();
-
-  try {
-    const stripe = Stripe(session.publishableKey);
-    const checkout = await stripe.initEmbeddedCheckout({ clientSecret: session.clientSecret });
-    checkout.mount('#stripeMount');
-  } catch (err) {
-    console.error('[stripe]', err);
-    host.querySelector('#stripeMount').innerHTML =
-      '<div class="error">The card form didn\'t load. Refresh and try again, or we can send you a secure link instead.</div>';
-  }
+// Email first, so an abandon is a follow-up, not a loss.
+async function captureEmail(){
+  if (S.owner.email) return pricing();
+  await typing(300);
+  say('Where should we send your order form? We\'ll also save your progress so you can finish on any device.');
+  await control((el, done) => {
+    el.innerHTML = `<div class="row2 em"><input class="in" id="eN" placeholder="Your name" autocomplete="name" value="${esc(S.owner.name)}"><input class="in" id="eE" type="email" placeholder="Work email" autocomplete="email" value="${esc(S.owner.email)}"></div><div class="actions"><button class="btn" id="go">Continue</button></div><div class="hint">No newsletter, no spam. Just your paperwork and your login.</div>`;
+    const show = errBox(el);
+    el.querySelector('#go').onclick = () => { const name = el.querySelector('#eN').value.trim(), email = el.querySelector('#eE').value.trim().toLowerCase(); if (!name) return show('Your name, please.'); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return show('That email doesn\'t look right.'); S.owner.name = name; S.owner.email = email; me(`${name} · ${email}`); done(true); };
+    [el.querySelector('#eN'), el.querySelector('#eE')].forEach(i => i.onkeydown = (e) => { if (e.key === 'Enter') el.querySelector('#go').click(); });
+    setTimeout(() => el.querySelector(S.owner.name ? '#eE' : '#eN').focus(), 50);
+  });
+  renderRecord(); save(); track('onb_email'); lead('started');
+  return pricing();
 }
 
-/* ── coverage map ─────────────────────────────────────────────────
-   Every authorized store in Ontario, with the retailer's own doors lit
-   as coverage cells. Read-only and animated — the point is to show what
-   their listing becomes, not to let them edit it.
-   ──────────────────────────────────────────────────────────────── */
-
-/** Catchment radius per store, in km. */
-const CELL_KM = 5;
-
-async function showCoverageMap() {
-  const overlay = document.createElement('div');
-  overlay.className = 'mapwrap';
-  const storeName = state.profile?.storeName?.value || 'Your store';
-  const n = state.confirmedLocations.length || 1;
-
-  overlay.innerHTML = `
-    <div class="mapcard" role="dialog" aria-label="Your coverage on the marketplace">
-      <button class="mapclose" type="button" aria-label="Close">✕</button>
-      <div class="maphead">
-        <h2>Your coverage on the marketplace</h2>
-        <p>Brands buy advertising against the areas where demand is densest. Each of your
-           stores becomes a coverage cell — a catchment Poof can route orders into. The more
-           ground you cover, the more of a brand's campaign lands with you.</p>
-      </div>
-
-      <div class="covbar">
-        <div class="covstat" id="covStat">
-          <b id="covKm">—</b>
-          <span id="covLabel">Turn coverage on to see your reach</span>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="covToggle" checked>
-          <span class="tk"><i></i></span>
-          <span class="tl">Poof coverage on</span>
-        </label>
-      </div>
-
-      <div class="mapstage"><div id="leaf"></div><div class="maploading" id="mapLoad">Locating your ${n === 1 ? 'store' : 'stores'}…</div></div>
-
-      <div class="mapfoot">
-        <span class="lg"><i class="lg-you"></i> ${escapeHtml(storeName)}</span>
-        <span class="lg"><i class="lg-cell"></i> Coverage cell · ${CELL_KM} km catchment</span>
-        <span class="lg-note" id="precNote"></span>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  requestAnimationFrame(() => overlay.classList.add('in'));
-
-  const close = () => { overlay.classList.remove('in'); setTimeout(() => overlay.remove(), 260); };
-  overlay.querySelector('.mapclose').addEventListener('click', close);
-  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-  document.addEventListener('keydown', function esc(e) {
-    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
-  });
-
-  try {
-    const ids = state.confirmedLocations.map(l => l.id);
-    let locs;
-    try {
-      const r = await api('/api/geocode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids })
-      });
-      locs = r.locations;
-    } catch {
-      locs = state.confirmedLocations.map(l => ({ ...l, precision: 'city' }));
-    }
-    overlay.querySelector('#mapLoad').remove();
-    renderLeaflet(overlay, locs, storeName);
-  } catch (err) {
-    console.error('[map]', err);
-    overlay.querySelector('#mapLoad').textContent = 'Map unavailable right now.';
+/* ---------- pricing (show, don't tell) ---------- */
+async function pricing(){
+  await typing(400);
+  const s = S.entryStoreId ? storeById(S.entryStoreId) : S.chain.stores[0];
+  say(`Here's your listing today, next to what it looks like with the <b>Retail Ad Network</b> on.`);
+  say(`<div class="ba"><div class="lst dim"><span class="tag">Today</span><b>${esc(titleCase(s.name))}</b><small>${esc(titleCase(s.addr))}, ${esc(s.city)}</small><div class="menu"><div><span>Blue Dream 3.5g</span><span>$—</span></div><div><span>Pre-rolls 5×0.5g</span><span>$—</span></div><div><span>Gummies 10mg</span><span>$—</span></div></div><div class="order">Order for pickup</div><div class="nope">Shoppers see your name and address. Nothing to buy.</div></div><div class="lst live"><span class="tag">Live on Poof</span><b>${esc(titleCase(s.name))}</b><small>${esc(titleCase(s.addr))}, ${esc(s.city)} · open now</small><div class="menu"><div><span>Blue Dream 3.5g</span><span>$24.99</span></div><div><span>Pre-rolls 5×0.5g</span><span>$18.50</span></div><div><span>Gummies 10mg</span><span>$6.99</span></div></div><div class="order">Order for pickup →</div><div class="nope" style="color:var(--pink-ink);font-style:normal">Your live menu, your prices, brand-funded traffic routed to your checkout.</div></div></div>`, 'wide');
+  await typing(350);
+  say(`<b>${money(CFG.priceCad)} per location, per month</b>, plus HST. No revenue share, no cut of orders. Nothing charged until you approve your menu and go live.${CFG.offer ? ` <span class="offer" style="margin-left:4px"><i></i>${offerText()} when you add a card during signup · until ${offerUntil()}</span>` : ''}`);
+  const proof = [];
+  if (CFG.brands && CFG.brands.length) proof.push(`<div class="proof"><small>Brands funding campaigns</small>${CFG.brands.map(b => `<span>${esc(b)}</span>`).join('')}</div>`);
+  if (CFG.testimonial) proof.push(`<div class="quote">“${esc(CFG.testimonial.quote)}”<small>— ${esc(CFG.testimonial.name)}, ${esc(CFG.testimonial.store)}</small></div>`);
+  if (proof.length) say(proof.join(''), 'wide');
+  const v = await buttons([['Sounds good — keep going', true], ['I have a question first', false, true]]);
+  if (!v) {
+    track('onb_question');
+    say(`<div class="faq"><details><summary>Can I cancel?</summary><p>Yes, any time, month to month. See the Payments, Cancellation and Refund Policy at <a href="${CFG.termsUrl}" target="_blank" rel="noopener">${CFG.termsUrl.replace('https://', '')}</a>.</p></details><details><summary>What does my POS need to do?</summary><p>Nothing on your side. We contact your POS and payment provider with you copied, and they switch on the connection. Cova, Greenline, Blaze and Dutchie are all supported.</p></details><details><summary>Who handles the orders?</summary><p>You do, in your POS, like any other online order. Poof routes the shopper to your checkout; the sale, the ID check and the handoff are yours.</p></details><details><summary>Do you take a cut?</summary><p>No. ${money(CFG.priceCad)}/location/month flat. Brands pay for campaigns separately.</p></details><details><summary>Why do you need a card before I'm live?</summary><p>So launch day isn't held up chasing payment details. Nothing is charged until you approve your menu${CFG.offer ? `, and adding it now gets you ${offerText()}` : ''}. You can also skip it and give it to us on the setup call.</p></details></div>`, 'wide');
+    await control((el, done) => {
+      el.innerHTML = `<div class="actions"><button class="btn" id="go">Got it — keep going</button>${CFG.sms ? `<a class="btn ghost" href="sms:${esc(CFG.sms)}?&body=${encodeURIComponent('Hi Baz, quick question about Poof for ' + storeName() + ': ')}" id="sms">Text Baz</a>` : ''}${CFG.calendly ? `<a class="btn ghost" href="${esc(CFG.calendly)}" target="_blank" rel="noopener" id="call">Book 10 min</a>` : ''}</div><div class="hint">Rather talk it through? Baz answers texts fast. Your progress is saved either way.</div>`;
+      el.querySelector('#go').onclick = () => { me('Got it'); done(true); };
+      const sm = el.querySelector('#sms'); if (sm) sm.onclick = () => track('onb_exit_sms');
+      const cl = el.querySelector('#call'); if (cl) cl.onclick = () => track('onb_exit_call');
+    });
   }
+  return franchise();
 }
 
-function renderLeaflet(overlay, locs, storeName) {
-  const pts = locs.filter(l => l.lat && l.lng);
-  if (!pts.length) {
-    overlay.querySelector('.mapstage').innerHTML =
-      '<div class="maploading">We couldn\'t place your stores on the map yet.</div>';
-    return;
+/* ============================================================
+   STEP 2 — LOCATIONS
+   ============================================================ */
+// Personal-link path: ask about the rest of the chain before showing a picker.
+async function franchise(){
+  setStep(1);
+  const c = S.chain;
+  if (!S.entryStoreId || c.count < 2) return locations();
+  const others = c.count - 1;
+  await typing(350);
+  say(`There ${others === 1 ? 'is' : 'are'} <b>${others} other ${esc(c.name)} ${plural(others, 'location', 'locations')}</b> in Ontario. Do you own or operate any of them?`);
+  const v = await buttons([['Just this one', 'one'], ['Yes, let me pick', 'pick', true], ['I own all of them', 'all', true]]);
+  track('onb_franchise', { answer: v });
+  if (v === 'one') { S.selected = [S.entryStoreId]; renderRecord(); save(); return afterPick(); }
+  if (v === 'all') { S.selected = c.stores.map(s => s.id); renderRecord(); save(); return afterPick(); }
+  return locations(true, 'Tick the ones you run. Yours is already ticked; nothing else gets added unless you tick it.');
+}
+
+async function locations(returning, prompt){
+  setStep(1);
+  const stores = allStores();
+  if (!returning) {
+    await typing(300);
+    if (stores.length === 1) { S.selected = [stores[0].id]; renderRecord(); say(`One location — <b>${esc(titleCase(stores[0].addr))}, ${esc(stores[0].city)}</b>. That's the one we'll set up.`); return afterPick(); }
+    say('Which locations are we setting up? Pick one, a few, or all of them. You can group stores — by region, or however you run them — and the groups carry through to your agreement and admin panel.');
+  } else if (prompt) { await typing(250); say(prompt); }
+  await control((el, done) => renderPicker(el, done));
+  renderRecord(); save();
+  return afterPick();
+}
+
+async function afterPick(){
+  const n = S.selected.length; track('onb_locations', { count: n }); lead('locations');
+  await typing(250);
+  say(`<b>${n} ${plural(n, 'store', 'stores')}</b> — ${money(monthly())}/mo + HST${S.groups.length ? `, in ${S.groups.length} ${plural(S.groups.length, 'group', 'groups')}` : ''}. Anything to add under a different name?`);
+  const more = await buttons([['No, that\'s everything', false], ['Add a store under a different name', true, true]]);
+  if (more) return storeSearch(true);
+  return systems();
+}
+
+function renderPicker(el, done){
+  const stores = allStores(); const byId = {}; stores.forEach(s => byId[s.id] = s);
+  const sel = new Set(S.selected);
+  function autoGroups(){ const inCustom = new Set(S.groups.flatMap(g => g.ids)); const cities = {}; stores.filter(s => !inCustom.has(s.id)).forEach(s => { (cities[s.city] = cities[s.city] || []).push(s.id); }); return Object.keys(cities).sort().map(c => ({ name: c, ids: cities[c], auto: true })); }
+  const closed = new Set();
+  el.innerHTML = `<div class="lbl">Locations — choose the stores to set up</div><div class="lp"><div class="lp-head"><div class="lp-total" id="lpTotal"></div><div class="lp-links"><a id="lpAll">Select all</a><a id="lpNone">Clear</a></div></div><div class="lp-body" id="lpBody"></div><div class="lp-foot"><button class="btn ghost sm" id="lpGroup" disabled>Group selected…</button><span class="hint">Tap a city to select its stores</span></div></div><div class="actions"><button class="btn" id="lpGo" disabled>Continue</button></div>`;
+  const body = el.querySelector('#lpBody');
+  function paint(){
+    const n = sel.size, m = stores.length;
+    el.querySelector('#lpTotal').innerHTML = `${n} of ${m} selected <small>${n} × ${money(CFG.priceCad)} = <span class="amt">${money(n * CFG.priceCad)}/mo</span> + HST${n ? '' : ' — pick at least one'}</small>`;
+    el.querySelector('#lpGo').disabled = n === 0; el.querySelector('#lpGroup').disabled = n < 2;
+    const groups = [...S.groups.map(g => ({ ...g, auto: false })), ...autoGroups()]; const single = groups.length === 1 && groups[0].auto;
+    body.innerHTML = groups.map((g, gi) => { const on = g.ids.filter(id => sel.has(id)).length; const state = on === 0 ? '' : on === g.ids.length ? 'on' : 'part';
+      return `<div class="lp-g${closed.has(g.name) ? ' closed' : ''}" data-g="${gi}">${single ? '' : `<div class="lp-gh"><span class="rb ${state}" data-gt="${gi}"></span><b>${esc(g.name)}</b><small>· ${g.ids.length} ${plural(g.ids.length, 'store', 'stores')}</small>${g.auto ? '' : `<span class="x" data-ungroup="${gi}" title="Ungroup">✕ ungroup</span>`}<span class="tog">▾</span></div>`}<div class="lp-rows">${g.ids.map(id => { const s = byId[id]; return `<div class="lp-r${sel.has(id) ? ' on' : ''}" data-id="${id}"><span class="rb"></span><span class="t"><b>${esc(s.name)}</b><small>${esc(s.addr)}, ${esc(s.city)}, ${esc(s.postal)}</small></span>${id === S.entryStoreId ? '<span class="you">you</span>' : ''}</div>`; }).join('')}</div></div>`; }).join('');
+    body.querySelectorAll('.lp-r').forEach(r => r.onclick = () => { const id = r.dataset.id; sel.has(id) ? sel.delete(id) : sel.add(id); paint(); });
+    body.querySelectorAll('[data-gt]').forEach(t => t.onclick = (e) => { e.stopPropagation(); const g = groups[+t.dataset.gt]; const all = g.ids.every(id => sel.has(id)); g.ids.forEach(id => all ? sel.delete(id) : sel.add(id)); paint(); });
+    body.querySelectorAll('.lp-gh').forEach(h => h.onclick = (e) => { if (e.target.closest('[data-gt],[data-ungroup]')) return; const g = h.closest('.lp-g'); const name = groups[+g.dataset.g].name; closed.has(name) ? closed.delete(name) : closed.add(name); g.classList.toggle('closed'); });
+    body.querySelectorAll('[data-ungroup]').forEach(x => x.onclick = (e) => { e.stopPropagation(); S.groups.splice(+x.dataset.ungroup, 1); paint(); });
   }
-
-  const map = L.map(overlay.querySelector('#leaf'), {
-    zoomControl: false,
-    scrollWheelZoom: true,
-    attributionControl: true
-  });
-
-  // Light basemap, to match the rest of the flow.
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap © CARTO',
-    maxZoom: 19
-  }).addTo(map);
-
-  L.control.zoom({ position: 'topright' }).addTo(map);
-
-  const cells = L.layerGroup();
-  const markers = L.layerGroup().addTo(map);
-
-  for (const p of pts) {
-    L.circle([p.lat, p.lng], {
-      radius: CELL_KM * 1000,
-      className: 'cell',
-      color: '#FF428A', weight: 1.6, opacity: .9,
-      fillColor: '#FF428A', fillOpacity: .13,
-      dashArray: '5 5'
-    }).addTo(cells);
-
-    L.circleMarker([p.lat, p.lng], {
-      radius: 7, color: '#FFFFFF', weight: 2.5,
-      fillColor: '#FF428A', fillOpacity: 1
-    })
-      .bindTooltip(
-        `<b>${escapeHtml(storeName)}</b><br>${escapeHtml(p.address || p.name || '')}`,
-        { direction: 'top', offset: [0, -8] }
-      )
-      .addTo(markers);
-  }
-
-  cells.addTo(map);
-
-  const bounds = L.latLngBounds(pts.map(p => [p.lat, p.lng]));
-  map.fitBounds(bounds.pad(pts.length === 1 ? 0.9 : 0.35), { maxZoom: 13 });
-  setTimeout(() => map.invalidateSize(), 60);
-
-  /* ---- coverage toggle ---- */
-  const toggle = overlay.querySelector('#covToggle');
-  const kmEl = overlay.querySelector('#covKm');
-  const labelEl = overlay.querySelector('#covLabel');
-  const areaKm2 = unionAreaKm2(pts, CELL_KM);
-  const cities = new Set(pts.map(p => p.name)).size;
-
-  const paint = on => {
-    if (on) {
-      cells.addTo(map);
-      kmEl.textContent = `${Math.round(areaKm2).toLocaleString()} km²`;
-      labelEl.textContent = `covered by your ${pts.length} ${pts.length === 1 ? 'store' : 'stores'}`
-        + (cities > 1 ? ` across ${cities} cities` : '');
-      overlay.querySelector('.covbar').classList.add('on');
-    } else {
-      map.removeLayer(cells);
-      kmEl.textContent = '0 km²';
-      labelEl.textContent = 'Coverage off — your store is just a pin on the map';
-      overlay.querySelector('.covbar').classList.remove('on');
-    }
+  el.querySelector('#lpAll').onclick = () => { stores.forEach(s => sel.add(s.id)); paint(); };
+  el.querySelector('#lpNone').onclick = () => { sel.clear(); paint(); };
+  el.querySelector('#lpGroup').onclick = () => {
+    const ids = [...sel]; const def = ids.length === stores.length ? 'All stores' : [...new Set(ids.map(id => byId[id].city))].slice(0, 2).join(' + ') + (ids.length > 2 ? ' area' : '');
+    const box = document.createElement('div'); box.className = 'lp-foot'; box.style.borderTop = '0';
+    box.innerHTML = `<input class="in" id="gName" placeholder="Group name (e.g. GTA, Northern Ontario)" value="${esc(def)}" style="flex:1;min-width:200px"><button class="btn sm" id="gOk">Create group</button><button class="btn ghost sm" id="gNo">Cancel</button>`;
+    el.querySelector('.lp').appendChild(box); const gi = box.querySelector('#gName'); gi.focus(); gi.select();
+    box.querySelector('#gNo').onclick = () => box.remove();
+    box.querySelector('#gOk').onclick = () => { const name = gi.value.trim() || def; S.groups.forEach(g => g.ids = g.ids.filter(id => !ids.includes(id))); S.groups = S.groups.filter(g => g.ids.length); S.groups.push({ name, ids }); box.remove(); paint(); };
+    gi.onkeydown = (e) => { if (e.key === 'Enter') box.querySelector('#gOk').click(); };
   };
-  toggle.addEventListener('change', () => paint(toggle.checked));
-  paint(true);
-
-  const approx = pts.filter(p => p.precision !== 'exact').length;
-  overlay.querySelector('#precNote').textContent = approx
-    ? `${approx} of ${pts.length} pinned at city level`
-    : 'Pinned to your street address';
+  el.querySelector('#lpGo').onclick = () => { S.selected = stores.map(s => s.id).filter(id => sel.has(id)); S.groups = S.groups.map(g => ({ name: g.name, ids: g.ids.filter(id => sel.has(id)) })).filter(g => g.ids.length); me(sel.size === stores.length ? `All ${sel.size}` : `${sel.size} of ${stores.length} locations`); done(true); };
+  paint();
 }
 
-/**
- * Area of the union of the coverage circles, in km².
- *
- * Summing πr² would double-count where stores overlap — exactly what happens
- * with a chain clustered in one city, which is where the number matters most.
- * Monte Carlo over the bounding box is accurate to about a percent and takes
- * no dependencies.
- */
-function unionAreaKm2(pts, radiusKm) {
-  if (!pts.length) return 0;
-  const KM_PER_DEG_LAT = 110.574;
-  const kmPerDegLng = lat => 111.320 * Math.cos(lat * Math.PI / 180);
-
-  const dLat = radiusKm / KM_PER_DEG_LAT;
-  const midLat = pts.reduce((s, p) => s + p.lat, 0) / pts.length;
-  const dLng = radiusKm / kmPerDegLng(midLat);
-
-  const minLat = Math.min(...pts.map(p => p.lat)) - dLat;
-  const maxLat = Math.max(...pts.map(p => p.lat)) + dLat;
-  const minLng = Math.min(...pts.map(p => p.lng)) - dLng;
-  const maxLng = Math.max(...pts.map(p => p.lng)) + dLng;
-
-  const boxKm2 = (maxLat - minLat) * KM_PER_DEG_LAT
-               * (maxLng - minLng) * kmPerDegLng(midLat);
-
-  const N = 40000;
-  let hits = 0;
-  for (let i = 0; i < N; i++) {
-    const la = minLat + Math.random() * (maxLat - minLat);
-    const ln = minLng + Math.random() * (maxLng - minLng);
-    for (const p of pts) {
-      const dy = (la - p.lat) * KM_PER_DEG_LAT;
-      const dx = (ln - p.lng) * kmPerDegLng(p.lat);
-      if (dx * dx + dy * dy <= radiusKm * radiusKm) { hits++; break; }
-    }
-  }
-  return boxKm2 * (hits / N);
+/* ============================================================
+   STEP 3 — SYSTEMS
+   ============================================================ */
+async function systems(){
+  setStep(2);
+  await typing(300);
+  say('What are you running? We use this to contact the right people — nothing to install on your side.');
+  const sy = S.systems;
+  await control((el, done) => {
+    const chipRow = (id, list, cur) => `<div class="chips" id="${id}">${list.map(x => `<button class="chip${cur === x ? ' on' : ''}" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div><input class="in" id="${id}Other" placeholder="Which one?" style="display:${cur && !list.includes(cur) ? 'block' : 'none'};margin-top:8px" value="${cur && !list.includes(cur) ? esc(cur) : ''}">`;
+    el.innerHTML = `<div class="lbl">Point of sale</div>${chipRow('pos', POS, sy.pos)}<div class="lbl" style="margin-top:14px">Payment processor</div>${chipRow('proc', PROC, sy.processor)}<div class="lbl" style="margin-top:14px">E-commerce platform</div>${chipRow('ecom', ECOM, sy.ecommerce || (sy.pos ? 'None' : ''))}<div class="lbl" style="margin-top:14px">Delivery?</div><div class="chips" id="del"><button class="chip${sy.delivery === true ? ' on' : ''}" data-v="yes">Yes</button><button class="chip${sy.delivery === false ? ' on' : ''}" data-v="no">No</button></div><div id="delSw" style="display:${sy.delivery ? 'block' : 'none'}"><div class="lbl" style="margin-top:14px">Delivery software</div>${chipRow('dsw', DELIV, sy.deliverySoftware)}</div><div class="actions"><button class="btn" id="go">Systems confirmed</button></div>`;
+    const show = errBox(el); const val = {};
+    function wire(id){ const row = el.querySelector('#' + id), other = el.querySelector('#' + id + 'Other'); const on = row.querySelector('.chip.on'); val[id] = on ? (on.dataset.v === 'Other' ? other.value : on.dataset.v) : '';
+      row.querySelectorAll('.chip').forEach(c => c.onclick = () => { row.querySelectorAll('.chip').forEach(x => x.classList.remove('on')); c.classList.add('on'); const isOther = c.dataset.v === 'Other'; other.style.display = isOther ? 'block' : 'none'; val[id] = isOther ? other.value : c.dataset.v; if (isOther) other.focus(); });
+      other.oninput = () => val[id] = other.value.trim(); }
+    ['pos', 'proc', 'ecom', 'dsw'].forEach(wire);
+    el.querySelectorAll('#del .chip').forEach(c => c.onclick = () => { el.querySelectorAll('#del .chip').forEach(x => x.classList.remove('on')); c.classList.add('on'); val.del = c.dataset.v === 'yes'; el.querySelector('#delSw').style.display = val.del ? 'block' : 'none'; });
+    if (sy.delivery !== null) val.del = sy.delivery;
+    el.querySelector('#go').onclick = () => {
+      if (!val.pos) return show('Pick your point of sale.'); if (!val.proc) return show('Pick your payment processor.'); if (!val.ecom) return show('Pick your e-commerce platform, or None.'); if (val.del === undefined) return show('Do you offer delivery?'); if (val.del && !val.dsw) return show('Which delivery software?');
+      S.systems = { pos: val.pos, processor: val.proc, ecommerce: val.ecom === 'None' ? '' : val.ecom, delivery: val.del, deliverySoftware: val.del ? val.dsw : '' };
+      me('Systems confirmed'); done(true);
+    };
+  });
+  renderRecord(); save(); track('onb_systems'); lead('systems');
+  await typing(250);
+  const direct = /cova|greenline|blaze|dutchie/i.test(S.systems.pos);
+  say(direct ? `Good — ${esc(S.systems.pos)} is one we connect to directly.${S.systems.delivery ? ' Delivery noted.' : ''}` : 'Noted — we\'ll confirm the connection path for your POS on the setup call.');
+  return review();
 }
 
-/* --- terminal states --- */
-
-async function finished() {
-  if (thread.children.length) await typing(700);
-  renderProgress('payment');
-
-  say('You\'re in.', { lead: true });
-  await wait(300);
-  say('Welcome to the Poof family. Your card is saved and <strong>nothing has been charged</strong>.');
-  await wait(300);
-  say('Here\'s exactly what happens from here — the first one\'s already done.');
-
-  const steps = [
-    ['Signed up', 'Agreement accepted — your order form is on its way to your inbox.', 'done'],
-    ['Baz will reach out', 'Within one business day, to help you get set up and walk you through what to expect.', 'next'],
-    ['We connect your systems', 'We contact your integration partners, with you copied on every message.', ''],
-    ['Your admin panel', 'Login sent, menu configured, ready for your approval.', ''],
-    ['Go live', 'You approve, we launch, and the first invoice starts.', '']
+/* ============================================================
+   STEP 4 — REVIEW (owner details + referral + summary)
+   ============================================================ */
+async function review(){
+  setStep(3);
+  await typing(300);
+  say('Almost there. Who\'s the account owner, and do you have a brand referral code?');
+  await control((el, done) => {
+    el.innerHTML = `<div class="lbl">Account owner</div><input class="in" id="oN" placeholder="Full name" autocomplete="name" value="${esc(S.owner.name)}"><div class="row2" style="margin-top:10px"><input class="in" id="oE" type="email" placeholder="Work email" autocomplete="email" value="${esc(S.owner.email)}"><input class="in" id="oM" type="tel" placeholder="Mobile (optional)" autocomplete="tel" value="${esc(S.owner.mobile)}"></div><div class="lbl" style="margin-top:14px">Referral code <span style="font-weight:500;text-transform:none;letter-spacing:0">(optional)</span></div><div class="row2 code"><input class="in" id="code" placeholder="e.g. BUZZD" style="text-transform:uppercase" value="${esc(S.referral ? S.referral.code : '')}"><button class="btn ghost" id="apply">Apply</button></div><div class="hint" id="codeHint">${S.referral ? '✓ ' + esc(S.referral.code) + ' — ' + esc(S.referral.description) : (CFG.offer ? 'No code? You still get ' + offerText() + ' by adding a card at the end.' : 'If a brand you stock gave you a code, it goes here.')}</div><div class="actions"><button class="btn" id="go">Review my setup</button></div>`;
+    const show = errBox(el);
+    el.querySelector('#apply').onclick = async () => { const code = el.querySelector('#code').value.trim().toUpperCase(); const h = el.querySelector('#codeHint'); if (!code) { S.referral = null; h.textContent = ''; return; } h.textContent = 'Checking…'; const r = await fetch('/api/promo?code=' + encodeURIComponent(code)).then(r => r.json()).catch(() => ({ valid: false })); if (r.valid) { S.referral = { code: r.code, description: r.description }; h.innerHTML = `<span class="ok">✓</span> ${esc(r.code)} — ${esc(r.description)}, applied at go-live`; } else { S.referral = null; h.textContent = `"${code}" isn't an active code — mention it on the setup call instead.`; } };
+    el.querySelector('#go').onclick = () => { const name = el.querySelector('#oN').value.trim(), email = el.querySelector('#oE').value.trim().toLowerCase(), mobile = el.querySelector('#oM').value.trim(); if (name.split(' ').length < 2) return show('Full name, please.'); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return show('That email doesn\'t look right.'); S.owner = { name, email, mobile }; me(`${name} · ${email}`); done(true); };
+  });
+  renderRecord(); save(); track('onb_review'); lead('review');
+  await typing(300);
+  const n = S.selected.length, sy = S.systems, cities = [...new Set(selectedStores().map(s => s.city))];
+  const rows = [
+    ['Store', esc(storeName()) + (S.extraChains.length ? ` <small style="color:var(--muted)">+ ${S.extraChains.map(c => esc(c.name)).join(', ')}</small>` : '')],
+    ['Locations', `${n} of ${allStores().length} — ${esc(cities.slice(0, 4).join(', '))}${cities.length > 4 ? ` and ${cities.length - 4} more` : ''}${S.groups.length ? ` · ${S.groups.length} ${plural(S.groups.length, 'group', 'groups')}` : ''}`],
+    ['AGCO', `${n} ${plural(n, 'licence', 'licences')} on file, all Authorized to Open`],
+    ['Systems', `${esc(sy.pos)} · ${esc(sy.processor)}${sy.ecommerce ? ' · ' + esc(sy.ecommerce) : ''}${sy.delivery ? ' · delivery via ' + esc(sy.deliverySoftware) : ''}`],
+    ['Retail Ad Network', `${n} × ${money(CFG.priceCad)} = <b>${money(monthly())}/mo</b> + HST${S.referral ? ` · <code>${esc(S.referral.code)}</code> at go-live` : CFG.offer ? ` · <span style="color:var(--pink-ink)">${offerText()} with card</span>` : ''}`],
+    ['Account owner', `${esc(S.owner.name)} · ${esc(S.owner.email)}`],
   ];
-
-  const el = document.createElement('div');
-  el.className = 'controls';
-  el.innerHTML = `
-    <div class="timeline">
-      ${steps.map(([title, sub, cls]) => `
-        <div class="tl ${cls}">
-          <span class="tl-node"></span>
-          <div><b>${escapeHtml(title)}</b><span>${escapeHtml(sub)}</span></div>
-        </div>`).join('')}
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary btn-lg" type="button" id="previewMap">Preview my store on the marketplace</button>
-      <a class="btn btn-ghost btn-lg" href="https://business.poof.ca" style="text-decoration:none">Open business.poof.ca</a>
-    </div>`;
-  thread.appendChild(el);
-  el.querySelector('#previewMap').addEventListener('click', showCoverageMap);
-  scrollDown();
-
-  await wait(400);
-  say('Anything looks wrong in the meantime, just reply to the email — it goes straight to your account rep.');
+  say(`<div class="sum">${rows.map(r => `<div><span>${r[0]}</span><div>${r[1]}</div></div>`).join('')}</div>`, 'wide');
+  const ok = await buttons([['Looks right', true], ['Change something', false, true]]);
+  if (!ok) { const which = await control((el, done) => { el.innerHTML = `<div class="lbl">What should change?</div><div class="chips">${[['Store', 'store'], ['Locations', 'locations'], ['Systems', 'systems'], ['Owner / code', 'review']].map(j => `<button class="chip" data-j="${j[1]}">${j[0]}</button>`).join('')}</div>`; el.querySelectorAll('.chip').forEach(c => c.onclick = () => { me(c.textContent); done(c.dataset.j); }); }); return jump(which); }
+  return terms();
 }
 
-async function cancelled() {
-  say('No problem — nothing was charged.', { lead: true });
-  await wait(250);
-  say('Your details are saved for 24 hours. Pick up where you left off whenever you\'re ready.');
+/* ============================================================
+   STEP 5 — AGREEMENT (terms + card)
+   ============================================================ */
+async function terms(){
+  setStep(4);
+  const n = S.selected.length;
+  await typing(350);
+  say(`The paperwork, in one step. Accepting covers all <b>${n} ${plural(n, 'location', 'locations')}</b> you've added, and lets us contact ${esc(partnerList())} to set up your connection, with you copied on every message.`);
   await control((el, done) => {
-    el.innerHTML = '<div class="btn-row"><button class="btn btn-primary" type="button">Start again</button></div>';
-    el.querySelector('button').addEventListener('click', () => { location.href = '/'; });
+    el.innerHTML = `<label class="tick" id="t1"><input type="checkbox"><span class="rb"></span><span>I have read and agree to the <a href="${CFG.termsUrl}" target="_blank" rel="noopener">Poof Dispensary Agreement, Terms and Conditions, and Payments Policy</a> (version ${CFG.termsVersion}), on behalf of <b>${esc(storeName())}</b> and each of the ${n} ${plural(n, 'location', 'locations')} listed above.</span></label>
+      <label class="tick" id="t2"><input type="checkbox"><span class="rb"></span><span>I am authorised to enter into this agreement on behalf of the business, and I authorise Poof to contact our POS, payment and delivery providers to set up the integration.</span></label>
+      <div class="row2" style="margin-top:4px"><input class="in" id="sName" placeholder="Your full name" autocomplete="name" value="${esc(S.owner.name)}"><input class="in" id="sTitle" placeholder="Your title (e.g. Owner, GM)" autocomplete="organization-title"></div>
+      <div class="actions"><button class="btn" id="go" disabled>Accept and continue</button></div>
+      <div class="hint" style="margin-top:8px">Accepting here has the same effect as signing — Electronic Commerce Act, 2000 (Ontario). We record your name, title, the time, your IP address and the agreement version; they appear on your order form.</div>`;
+    const t1 = el.querySelector('#t1 input'), t2 = el.querySelector('#t2 input'), nm = el.querySelector('#sName'), tt = el.querySelector('#sTitle'), go = el.querySelector('#go');
+    function check(){ el.querySelector('#t1').classList.toggle('on', t1.checked); el.querySelector('#t2').classList.toggle('on', t2.checked); go.disabled = !(t1.checked && t2.checked && nm.value.trim().split(' ').length > 1 && tt.value.trim()); }
+    [t1, t2].forEach(x => x.onchange = check); [nm, tt].forEach(x => x.oninput = check);
+    go.onclick = () => { S.acceptance = { agreed: true, authorised: true, name: nm.value.trim(), title: tt.value.trim(), clientAt: new Date().toISOString() }; me(`Accepted — ${S.acceptance.name}, ${S.acceptance.title}`); done(true); };
   });
+  save(); track('onb_terms'); lead('agreement');
+  return card();
 }
 
-run();
+async function card(){
+  const n = S.selected.length;
+  await typing(350);
+  if (!CFG.ready) { say('<b>Stripe isn\'t configured on this deployment yet.</b> Add the keys in Vercel and reload.', 'note'); return; }
+  // Create the customer + SetupIntent now so both paths have a record to accept against
+  const loading = say('One moment…', 'note'); let si;
+  try { si = await fetch('/api/setup-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store: { chain: S.chain.slug, chainName: storeName(), agcoName: S.chain.name, extra: S.extraChains.map(c => c.slug), overrides: S.overrides }, entryStoreId: S.entryStoreId, locations: S.selected, groups: S.groups, systems: S.systems, owner: S.owner, referral: S.referral, customerId: S.customerId }) }).then(r => r.json()); if (si.error) throw new Error(si.error); }
+  catch (e) { loading.remove(); say(`Couldn't start the last step: ${esc(e.message)}. <a href="#" id="retry">Try again</a>`, 'note'); $('retry').onclick = (ev) => { ev.preventDefault(); card(); }; return; }
+  loading.remove(); S.customerId = si.customerId; S.setupIntentId = si.setupIntentId; save();
+
+  say(`Last step — the card we'll keep on file for go-live. <b>Nothing is charged today.</b> You'll see your menu configured and approve it before the first invoice.`);
+  const value = CFG.offer ? CFG.offer.months * monthly() : 0;
+  const choice = await control((el, done) => {
+    el.innerHTML = `<div class="choice"><div class="pri" id="cAdd"><b>Add card now</b>${CFG.offer ? `<div class="big">${offerText()}</div><small>Worth ${money(value)} on ${n} ${plural(n, 'location', 'locations')}. Applied at go-live. Offer ends ${offerUntil()}.</small>` : '<small>So launch day isn\'t held up chasing payment details.</small>'}</div><div id="cSkip"><b>Skip for now</b><small>Give it to us on the setup call.${CFG.offer ? ` Standard pricing — ${money(CFG.priceCad)}/location from go-live, no free months.` : ''}</small></div></div>`;
+    el.querySelector('#cAdd').onclick = () => { me('Add card now'); done('add'); };
+    el.querySelector('#cSkip').onclick = () => { me('Skip for now'); done('skip'); };
+  });
+  if (choice === 'skip') {
+    if (CFG.offer) {
+      await typing(200);
+      say(`Just checking — skipping means passing on <b>${offerText()}</b> (${money(value)}). Still skip?`);
+      const sure = await buttons([['Add the card after all', 'add'], ['Yes, skip — I\'ll give it on the call', 'skip', true]]);
+      if (sure === 'add') return cardForm(si);
+    }
+    S.cardSkipped = true; track('onb_card_skipped');
+    return finishAccept();
+  }
+  return cardForm(si);
+}
+
+async function cardForm(si){
+  const stripe = Stripe(CFG.stripePublishableKey);
+  const elements = stripe.elements({ clientSecret: si.clientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#ff3d8b', colorText: '#08080a', borderRadius: '12px', fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif', fontSizeBase: '15px' }, rules: { '.Input': { borderColor: '#e8e8ee', boxShadow: 'none', padding: '13px 14px' }, '.Input:focus': { borderColor: '#ff3d8b', boxShadow: '0 0 0 4px rgba(255,61,139,.12)' } } }, fonts: [{ cssSrc: 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600&display=swap' }] });
+  const pe = elements.create('payment', { layout: 'tabs', wallets: { link: 'never', applePay: 'never', googlePay: 'never' }, fields: { billingDetails: { name: 'never', email: 'never', address: { country: 'never', postalCode: 'auto' } } }, terms: { card: 'never' } });
+  const v = await control((el, done) => {
+    el.innerHTML = `<div class="lbl">Card on file</div><div id="pe"></div><div class="actions"><button class="btn" id="go">Save card securely${CFG.offer ? ' · ' + offerText() : ''}</button><button class="btn link" id="back">Skip instead</button></div><div class="hint" style="margin-top:8px">Handled by <b>Stripe</b>. Poof never sees or stores your card number.</div>`;
+    const show = errBox(el); pe.mount('#pe');
+    el.querySelector('#back').onclick = () => { me('Skip instead'); done('skip'); };
+    el.querySelector('#go').onclick = async () => { const go = el.querySelector('#go'); go.disabled = true; go.textContent = 'Saving…'; show('');
+      const r = await stripe.confirmSetup({ elements, redirect: 'if_required', confirmParams: { payment_method_data: { billing_details: { name: S.owner.name, email: S.owner.email, address: { country: 'CA' } } } } });
+      if (r.error) { go.disabled = false; go.textContent = 'Save card securely'; return show(r.error.message); }
+      me('Card saved'); done('saved'); };
+  });
+  if (v === 'skip') { S.cardSkipped = true; track('onb_card_skipped'); } else { S.cardSkipped = false; track('onb_card_saved'); }
+  return finishAccept();
+}
+
+async function finishAccept(){
+  const rec = say('Recording your acceptance…', 'note'); let acc;
+  try { acc = await fetch('/api/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerId: S.customerId, setupIntentId: S.setupIntentId, acceptance: S.acceptance, cardSkipped: S.cardSkipped }) }).then(r => r.json()); if (acc.error) throw new Error(acc.error); }
+  catch (e) { rec.innerHTML = `We couldn't finish the record: ${esc(e.message)}. <a href="#" id="retryAcc">Try again</a>`; $('retryAcc').onclick = (ev) => { ev.preventDefault(); rec.remove(); finishAccept(); }; return; }
+  rec.remove(); S.orderFormUrl = acc.orderFormUrl; save();
+  return success(acc);
+}
+
+/* ---------- success ---------- */
+async function success(acc){
+  $('stepLabel').textContent = 'Done'; $('stepBar').style.width = '100%'; S.step = 5; renderRecord();
+  track('onb_complete', { card: S.cardSkipped ? 'skipped' : 'saved', offer: acc.offer ? 'yes' : 'no' }); lead('completed');
+  await typing(250);
+  say('<h2 style="margin:4px 0 0;font-size:24px">You\'re in.</h2>', 'wide');
+  say(`Welcome to the Poof family, ${esc(S.owner.name.split(' ')[0])}. ${acc.mail && acc.mail.retailer ? 'Your order form is in your inbox.' : 'Your order form is ready below.'}${acc.offer ? ` <b>${acc.offer.months} months free</b> is locked in for go-live.` : ''}`);
+  say(`<div class="steps"><div class="ok"><i></i><p style="margin:0"><b>Signed up</b><span>Agreement accepted${S.cardSkipped ? '' : ', card on file'}, order form issued.</span></p></div><div class="now"><i></i><p style="margin:0"><b>Baz reaches out</b><span>Within one business day, to walk you through it${S.cardSkipped ? ' and take your card' : ''}.</span></p></div><div><i></i><p style="margin:0"><b>We connect your systems</b><span>We contact ${esc(partnerList())}, with you copied.</span></p></div><div><i></i><p style="margin:0"><b>Your admin panel</b><span>Login sent, menu configured, ready for your approval.</span></p></div><div><i></i><p style="margin:0"><b>Go live</b><span>You approve, we launch, and the first invoice starts.</span></p></div></div>`, 'wide');
+  ctl.innerHTML = `<div class="actions"><a class="btn" href="${esc(S.orderFormUrl)}" target="_blank" rel="noopener">Download your order form</a><button class="btn ghost" id="mapBtn">Preview my coverage</button><a class="btn ghost" href="https://business.poof.ca">Open business.poof.ca</a></div>`;
+  $('mapBtn').onclick = showMap;
+  clearSave();
+}
+
+/* ---------- coverage map (Leaflet loaded on demand) ---------- */
+let map, layer, leafletLoading;
+function loadLeaflet(){ if (window.L) return Promise.resolve(); if (leafletLoading) return leafletLoading; leafletLoading = new Promise((res, rej) => { const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css); const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); return leafletLoading; }
+async function showMap(){
+  $('mapModal').classList.add('show'); track('onb_map');
+  try { await loadLeaflet(); } catch (e) { $('map').innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">Map couldn\'t load. Check your connection and try again.</div>'; return; }
+  const stores = selectedStores();
+  if (!map) { map = L.map('map', { scrollWheelZoom: false }); const keyed = CFG.mapKey ? `https://api.maptiler.com/maps/dataviz-light/{z}/{x}/{y}@2x.png?key=${CFG.mapKey}` : null; L.tileLayer(keyed || 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', keyed ? { tileSize: 512, zoomOffset: -1, maxZoom: 19, attribution: '© MapTiler © OpenStreetMap · stores: AGCO' } : { maxZoom: 19, attribution: '© OpenStreetMap © CARTO · stores: AGCO' }).addTo(map); }
+  if (layer) layer.remove(); layer = L.layerGroup().addTo(map); const R = 5;
+  stores.forEach(s => { L.circle([s.lat, s.lng], { radius: R * 1000, color: '#ff3d8b', weight: 1.5, fillColor: '#ff3d8b', fillOpacity: .14 }).addTo(layer); L.circleMarker([s.lat, s.lng], { radius: 5, color: '#fff', weight: 2, fillColor: '#ff3d8b', fillOpacity: 1 }).addTo(layer).bindTooltip(`${s.name}<br><small>${s.addr}, ${s.city}</small>`); });
+  if (stores.length) map.fitBounds(L.latLngBounds(stores.map(s => [s.lat, s.lng])).pad(0.25), { maxZoom: 11 });
+  const cells = new Set(); stores.forEach(s => { const kmLat = 1 / 110.574, kmLng = 1 / (111.32 * Math.cos(s.lat * Math.PI / 180)); for (let dx = -R; dx <= R; dx += .5) for (let dy = -R; dy <= R; dy += .5) if (dx * dx + dy * dy <= R * R) cells.add(Math.round((s.lat + dy * kmLat) * 200) + ',' + Math.round((s.lng + dx * kmLng) * 200 * Math.cos(s.lat * Math.PI / 180))); });
+  $('covKm').textContent = Math.round(cells.size * 0.25).toLocaleString('en-CA') + ' km²'; $('covSub').textContent = `Approximate coverage for ${stores.length} ${plural(stores.length, 'store', 'stores')}`;
+  setTimeout(() => map.invalidateSize(), 50);
+}
+$('mapClose').onclick = () => $('mapModal').classList.remove('show');
+$('mapModal').onclick = (e) => { if (e.target === $('mapModal')) $('mapModal').classList.remove('show'); };
+
+/* ---------- jump back ---------- */
+function jump(to){
+  note('— changing ' + to + ' —');
+  if (to === 'store') { S.chain = null; S.entryStoreId = null; S.selected = []; renderRecord(); return storeSearch(); }
+  if (to === 'locations') return locations(true);
+  if (to === 'systems') return systems();
+  if (to === 'review') return review();
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  try { CFG = { ...CFG, ...(await fetch('/api/config').then(r => r.json())) }; } catch (e) {}
+  loadGA(CFG.ga4);
+  if (!CFG.ready) $('notReady').style.display = 'block';
+  const path = location.pathname; const qs = new URLSearchParams(location.search);
+  const mStore = path.match(/^\/s\/([A-Za-z0-9\-]+)/) || (qs.get('store') ? [null, qs.get('store')] : null);
+  const mResume = path.match(/^\/r\/([A-Za-z0-9_\-\.]+)/);
+
+  if (mResume) {
+    const r = await fetch('/api/resume?t=' + encodeURIComponent(mResume[1])).then(r => r.json()).catch(() => ({ error: 'bad' }));
+    if (!r.error) {
+      FAST = true; Object.assign(S, { chain: r.chain, extraChains: r.extra, entryStoreId: r.entryStoreId, selected: r.selected, groups: r.groups, systems: r.systems || S.systems, owner: r.owner || S.owner, referral: r.referral });
+      renderRecord(); history.replaceState(null, '', '/'); track('onb_resume');
+      say(`Welcome back${S.owner.name ? ', ' + esc(S.owner.name.split(' ')[0]) : ''}. Picking up <b>${esc(storeName())}</b> where you left off.`);
+      const next = S.systems.pos ? review : S.selected.length ? systems : S.owner.email ? pricing : captureEmail;
+      return next();
+    }
+    note('That link has expired — let\'s start fresh.');
+  }
+  if (mStore) {
+    const id = mStore[1];
+    const r = await fetch(/^CRSA/i.test(id) ? `/api/lookup?store=${encodeURIComponent(id)}&places=1` : `/api/lookup?chain=${encodeURIComponent(id)}&places=1`).then(r => r.json()).catch(() => ({ error: 'bad' }));
+    if (!r.error && r.entry) return landing(r);
+    if (!r.error) { S.chain = r; renderRecord(); FAST = true; track('onb_view', { entry: 'chain-link' }); me(r.name); return confirmStore(); }
+  }
+  let saved = null; try { saved = JSON.parse(localStorage.getItem('poof-onb') || 'null'); } catch (e) {}
+  if (saved && saved.S && saved.S.chain && Date.now() - saved.at < 7 * 86400e3 && !saved.S.orderFormUrl) {
+    say(`Welcome back. Pick up where you left off with <b>${esc(saved.S.chain.name)}</b>?`);
+    const resume = await buttons([['Yes, continue', true], ['Start over', false, true]]);
+    if (resume) { Object.assign(S, saved.S); S.acceptance = null; S.cardSkipped = false; renderRecord(); FAST = true; const next = S.systems.pos ? review : S.selected.length ? systems : S.owner.email ? pricing : confirmStore; return next(); }
+    clearSave();
+  }
+  return intro();
+}
+boot();
+})();
 </script>
 </body>
 </html>

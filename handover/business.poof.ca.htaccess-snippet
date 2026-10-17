@@ -1,0 +1,7 @@
+# Add above the existing clean-URL rules in business.poof.ca's root .htaccess
+RewriteEngine On
+RewriteRule ^join/?$                 https://onboarding.poof.ca/ [R=301,L]
+RewriteRule ^join/.*$                https://onboarding.poof.ca/ [R=301,L]
+RewriteRule ^onboarding/?$           https://onboarding.poof.ca/ [R=301,L]
+RewriteRule ^retailers/(join|signup|start|onboard)/?$ https://onboarding.poof.ca/ [R=301,L]
+RewriteRule ^get-started/retailers?/?$ https://onboarding.poof.ca/ [R=301,L]

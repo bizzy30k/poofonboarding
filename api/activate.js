@@ -1,118 +1,78 @@
-import Stripe from 'stripe';
-import { getSubmission, markSubmission } from '../lib/store.js';
-import { sendGoLiveEmail } from '../lib/email.js';
-import { appendToTracker } from '../lib/tracker.js';
+// POST /api/activate   (admin only — go-live day)
+// Headers: x-admin-key: <ADMIN_KEY>
+// Body: { customerId, referralCode?, locations?, force? }
+//   locations — optional subset of AGCO ids to activate now (default: all on the record)
+//   force     — activate even if some doors are live on another customer
+//
+// Creates ONE subscription with quantity = number of locations, charged to the
+// card on file. Promo priority: referral code they entered (or passed here) →
+// launch offer (if they added a card during the offer window) → none.
+// Idempotent: a second call updates the quantity instead of creating another.
+//
+// curl -X POST https://onboarding.poof.ca/api/activate \
+//   -H "x-admin-key: $ADMIN_KEY" -H "Content-Type: application/json" \
+//   -d '{"customerId":"cus_123"}'
+const Stripe = require('stripe');
+const config = require('../lib/config');
+const record = require('../lib/record');
+const { findConflicts } = require('../lib/conflicts');
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
-
-/**
- * POST /api/activate  { submissionId }
- * Header: x-poof-admin-key
- *
- * Called when ops confirms the store is live on the network. This is the moment
- * billing starts — the card vaulted at signup is charged from here forward, and
- * a referral credit (if any) begins now rather than at signup.
- *
- * Deliberately not exposed to the retailer. Guard it with ADMIN_API_KEY until the
- * admin panel exists, then move it behind the panel's own auth.
- */
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const expected = process.env.ADMIN_API_KEY;
-  if (!expected) {
-    return res.status(503).json({ error: 'Activation is not configured. Set ADMIN_API_KEY.' });
-  }
-  if (!timingSafeEqual(req.headers['x-poof-admin-key'] || '', expected)) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const { submissionId, goLiveDate = null } = req.body || {};
-  if (!submissionId) return res.status(400).json({ error: 'submissionId is required.' });
-
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!config.ADMIN_KEY || req.headers['x-admin-key'] !== config.ADMIN_KEY) return res.status(401).json({ error: 'Unauthorized' });
+  const stripe = new Stripe(config.STRIPE_SECRET_KEY);
   try {
-    const submission = await getSubmission(submissionId);
-    if (!submission) return res.status(404).json({ error: 'Submission not found.' });
-    if (submission.status === 'live') {
-      return res.status(200).json({ alreadyLive: true, subscriptionId: submission.stripeSubscriptionId });
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const { customerId, referralCode, locations, force } = body;
+    const customer = await stripe.customers.retrieve(customerId);
+    const rec = record.unpack(customer.metadata || {});
+    if (!rec || !rec.acceptance?.at) return res.status(400).json({ error: 'No accepted agreement on this customer.' });
+    const pm = customer.invoice_settings?.default_payment_method;
+    if (!pm) return res.status(400).json({ error: 'No card on file. Collect it (Stripe → customer → add payment method → set as default) and run again.' });
+
+    const ids = Array.isArray(locations) && locations.length ? locations : rec.locations.map(l => l.id);
+    const qty = rec.locations.filter(l => ids.includes(l.id)).length;
+    if (!qty) return res.status(400).json({ error: 'No matching locations.' });
+
+    // Franchise guard: refuse doors already live elsewhere unless forced
+    const conflicts = (await findConflicts(stripe, rec.store.chainName, ids, customerId)).filter(c => /live/i.test(c.stage));
+    if (conflicts.length && !force) return res.status(409).json({ error: 'Some doors are already live on another account. Pass force:true to activate anyway.', conflicts });
+
+    let promo = null, promoSource = null;
+    const codes = [[(referralCode || rec.referral?.code || '').toUpperCase(), 'referral'], [rec.offer ? rec.offer.code : '', 'launch offer']];
+    for (const [code, src] of codes) {
+      if (!code) continue;
+      const list = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
+      if (list.data[0]) { promo = list.data[0]; promoSource = src; break; }
     }
-    if (!submission.stripeCustomerId || !submission.paymentMethodId) {
-      return res.status(409).json({ error: 'No payment method on file for this submission.' });
-    }
 
-    // One line item, quantity = Authorized Locations (§6.3).
-    const price = process.env.STRIPE_PRICE_AD_NETWORK;
-    const quantity = Math.max(
-      submission.locationCount
-        || submission.confirmedLocations?.length
-        || submission.profile?.locations?.length
-        || 1,
-      1
-    );
-    const items = price ? [{ price, quantity }] : [];
-
-    let subscription = null;
-
-    if (items.length) {
-      subscription = await stripe.subscriptions.create({
-        customer: submission.stripeCustomerId,
-        items,
-        default_payment_method: submission.paymentMethodId,
-        // Stripe Tax adds HST on top: the price is tax_behavior=exclusive.
+    const existing = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 5 });
+    const live = existing.data.find(s => ['active', 'trialing', 'past_due'].includes(s.status));
+    let sub;
+    if (live) {
+      sub = await stripe.subscriptions.update(live.id, {
+        items: [{ id: live.items.data[0].id, price: config.PRICE_ID, quantity: qty }],
+        proration_behavior: 'create_prorations',
+        metadata: { poof_locations: ids.join(','), poof_activated_at: new Date().toISOString() },
+      });
+    } else {
+      sub = await stripe.subscriptions.create({
+        customer: customerId,
+        items: [{ price: config.PRICE_ID, quantity: qty }],
+        default_payment_method: pm,
+        collection_method: 'charge_automatically',
         automatic_tax: { enabled: true },
-        // The credit clock starts now, on go-live — not at signup.
-        discounts: submission.referral?.couponId || submission.referral?.promotionCodeId
-          ? [submission.referral.couponId
-              ? { coupon: submission.referral.couponId }
-              : { promotion_code: submission.referral.promotionCodeId }]
-          : undefined,
-        description: `Poof Retail Network — ${submission.profile?.storeName?.value || ''}`,
-        metadata: {
-          submission_id: submissionId,
-          store_name: String(submission.profile?.storeName?.value || '').slice(0, 200),
-          goals: (submission.goals || []).join(','),
-          referral_brand: submission.referral?.brand || '',
-          locations: String(quantity),
-          went_live: goLiveDate || new Date().toISOString().slice(0, 10)
-        }
+        ...(promo ? { promotion_code: promo.id } : {}),
+        metadata: { poof_store_name: rec.store.chainName, poof_locations: ids.join(','), poof_activated_at: new Date().toISOString(), promo: promo ? `${promo.code} (${promoSource})` : '' },
       });
     }
 
-    const patch = {
-      status: 'live',
-      liveAt: new Date().toISOString(),
-      goLiveDate: goLiveDate || new Date().toISOString().slice(0, 10),
-      stripeSubscriptionId: subscription?.id || null
-    };
-    await markSubmission(submissionId, patch);
+    rec.activation = { at: new Date().toISOString(), subscription: sub.id, quantity: qty, locationIds: ids, promo: promo ? promo.code : null, promoSource };
+    await stripe.customers.update(customerId, { metadata: { ...record.pack(rec, record.chunksIn(customer.metadata)), onboarding_stage: 'Live', subscription: sub.id } });
 
-    await sendGoLiveEmail({ ...submission, ...patch }).catch(err =>
-      console.error('[activate] go-live email failed:', err.message));
-
-    await appendToTracker({ ...submission, ...patch }).catch(err =>
-      console.error('[activate] tracker update failed:', err.message));
-
-    return res.status(200).json({
-      ok: true,
-      subscriptionId: subscription?.id || null,
-      quantity,
-      billing: items.length ? 'started' : 'STRIPE_PRICE_AD_NETWORK not set — nothing billed'
-    });
-  } catch (err) {
-    console.error('[activate]', err);
-    return res.status(500).json({ error: 'Activation failed.' });
+    return res.status(200).json({ ok: true, subscription: sub.id, status: sub.status, quantity: qty, monthly: qty * config.PRICE_CAD, promo: promo ? promo.code : null, promoSource, conflictsOverridden: conflicts });
+  } catch (e) {
+    console.error('activate failed:', e);
+    return res.status(500).json({ error: e.message });
   }
-}
-
-/** Constant-time compare so the key can't be probed a character at a time. */
-function timingSafeEqual(a, b) {
-  const x = String(a), y = String(b);
-  let diff = x.length ^ y.length;
-  for (let i = 0; i < Math.max(x.length, y.length); i++) {
-    diff |= (x.charCodeAt(i) || 0) ^ (y.charCodeAt(i) || 0);
-  }
-  return diff === 0;
-}
+};
