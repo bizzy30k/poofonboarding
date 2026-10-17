@@ -1,4 +1,4 @@
-// GET /api/lookup?q=sessions         → chains matching the query
+// GET /api/lookup?q=sessions         → { chains, stores, all } matching the query (results = chains, for older clients)
 // GET /api/lookup?chain=sessions-cannabis → one chain with every authorized store
 // GET /api/lookup?chain=…&places=1   → same, plus Google Places details for the chain's first store (optional)
 const stores = require('../lib/stores');
@@ -55,6 +55,6 @@ module.exports = async (req, res) => {
     if (wantPlaces) out.places = await places(c.stores[0]);
     return res.status(200).json(out);
   }
-  if (q) return res.status(200).json({ results: stores.search(String(q)) });
+  if (q) { const r = stores.search(String(q)); return res.status(200).json({ results: r.chains, ...r }); }
   return res.status(400).json({ error: 'Pass ?q= or ?chain=' });
 };

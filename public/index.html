@@ -79,6 +79,15 @@ a{color:var(--pink-ink)} button{font:inherit}
 .dd .it:last-child{border-bottom:0}.dd .it:hover,.dd .it.on{background:#F3EDFD}
 .dd .it b{font-weight:600}.dd .it small{color:var(--muted);font-size:12.5px;white-space:nowrap}
 .dd .empty{padding:14px;color:var(--muted);font-size:14px}
+.dd .sec{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:9px 14px 6px;background:#fafafc;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2}
+.dd .it .rb{margin-right:2px}.dd .it .t{flex:1;min-width:0}.dd .it .t small{white-space:normal;display:block}
+.dd .it .add{color:var(--pink);font-weight:700;font-size:13px;white-space:nowrap}.dd .it.added{opacity:.55}.dd .it.added .add{color:var(--muted);font-weight:600}
+.dd .it.every b{color:var(--pink-ink)}
+.sel{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+.sel .pill{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 8px 6px 13px;font-size:13.5px;font-weight:600}
+.sel .pill small{color:var(--muted);font-weight:500}.sel .pill .x{cursor:pointer;color:var(--muted);padding:0 4px;font-size:15px}.sel .pill .x:hover{color:var(--ink)}
+.sel .tot{margin-left:auto;font-weight:800;font-size:14px}.sel .tot small{color:var(--muted);font-weight:500}
+.dd-bar{display:flex;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--line);background:#fafafc;position:sticky;bottom:0;z-index:2}
 /* chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:14px;color:var(--ink)}
@@ -333,33 +342,88 @@ async function landing(data){
 async function storeSearch(extra){
   setStep(0);
   await typing(300);
-  say(extra ? 'What\'s the other store called?' : 'What\'s your store called? You can also search by address, postal code or CRSA licence number.');
-  const chain = await control((el, done) => {
-    el.innerHTML = `<div class="lbl">Store name</div><input class="in" id="q" placeholder="Store name, address, postal code or CRSA number" autocomplete="off"><div class="dd" id="dd" style="display:none"></div>`;
-    const q = el.querySelector('#q'), dd = el.querySelector('#dd'); let t, results = [], cursor = -1;
-    async function run(){
-      const v = q.value.trim(); if (v.length < 2) { dd.style.display = 'none'; return; }
-      const r = await fetch('/api/lookup?q=' + encodeURIComponent(v)).then(r => r.json()).catch(() => ({ results: [] }));
-      results = r.results || []; cursor = -1; dd.style.display = 'block';
-      dd.innerHTML = results.length ? results.map((c, i) => `<div class="it" data-i="${i}"><span><b>${esc(c.name)}</b><br><small>${esc(c.sample.join(', '))}${c.count > 3 ? ' and more' : ''}</small></span><small>${c.count} ${plural(c.count, 'location', 'locations')}</small></div>`).join('')
-        : `<div class="empty">No authorized-to-open store matches "${esc(v)}". Only stores the AGCO has authorized to open can join right now.<br><a href="#" id="waitlist">Not on the list? Leave your details</a> and we'll reach out the day you're authorized.</div>`;
-      dd.querySelectorAll('.it').forEach(it => it.onclick = () => pick(results[+it.dataset.i]));
-      const w = dd.querySelector('#waitlist'); if (w) w.onclick = (e) => { e.preventDefault(); done({ waitlist: v }); };
+  say(extra ? 'What\'s the other store called?' : 'What\'s your store called? Add the whole group in one tap, or pick locations one at a time. You can also search by address, postal code or CRSA licence number.');
+  const picked = await control((el, done) => {
+    el.innerHTML = `<div class="lbl">Store name</div><input class="in" id="q" placeholder="Store name, address, postal code or CRSA number" autocomplete="off"><div class="dd" id="dd" style="display:none"></div><div class="sel" id="sel" style="display:none"></div><div class="actions" id="act" style="display:none"><button class="btn" id="go">Continue</button><button class="btn ghost sm" id="clr">Clear all</button></div>`;
+    const q = el.querySelector('#q'), dd = el.querySelector('#dd'), selBox = el.querySelector('#sel'), act = el.querySelector('#act');
+    let t, R = { chains: [], stores: [], all: { count: 0 } }, cursor = -1, lastQ = '';
+    // chosen: id → { id, name, addr, city, chain, chainName }  (stores already in the flow are pre-filled when adding more)
+    const chosen = new Map(); const chainInfo = {}; const ticked = new Set();
+    if (extra) allStores().forEach(st => { const c = [S.chain, ...S.extraChains].find(x => x.stores.some(y => y.id === st.id)); if (S.selected.includes(st.id)) chosen.set(st.id, { ...st, chain: c.slug, chainName: c.name }); });
+    const already = new Set(chosen.keys());
+    function add(st){ if (!chosen.has(st.id)) chosen.set(st.id, st); }
+    function addChain(c){ chainInfo[c.slug] = c; (R.stores.filter(x => x.chain === c.slug)).forEach(add); /* stores beyond the 40 shown */ if (c.ids.length > R.stores.filter(x => x.chain === c.slug).length) pending.push(c); }
+    const pending = []; // chains whose full store list must be fetched on continue
+    function paintSel(){
+      const byChain = {}; chosen.forEach(st => { (byChain[st.chain] = byChain[st.chain] || { name: st.chainName, items: [] }).items.push(st); });
+      const n = chosen.size + pending.reduce((a, c) => a + Math.max(0, c.ids.length - (chosen.size ? [...chosen.values()].filter(x => x.chain === c.slug).length : 0)), 0);
+      selBox.style.display = act.style.display = n ? 'flex' : 'none';
+      let html = '';
+      Object.entries(byChain).forEach(([slug, g]) => {
+        const pend = pending.find(c => c.slug === slug);
+        if (g.items.length > 3 || pend) html += `<span class="pill"><b>${esc(g.name)}</b><small>${pend ? pend.ids.length : g.items.length} locations</small><span class="x" data-chain="${esc(slug)}" title="Remove all">×</span></span>`;
+        else g.items.forEach(st => html += `<span class="pill"><b>${esc(titleCase(st.name))}</b><small>${esc(st.city)}</small><span class="x" data-id="${esc(st.id)}" title="Remove">×</span></span>`);
+      });
+      html += `<span class="tot">${n} ${plural(n, 'location', 'locations')} <small>· ${money(n * CFG.priceCad)}/mo + HST</small></span>`;
+      selBox.innerHTML = html;
+      selBox.querySelectorAll('[data-id]').forEach(x => x.onclick = () => { chosen.delete(x.dataset.id); paintSel(); paintDd(); });
+      selBox.querySelectorAll('[data-chain]').forEach(x => x.onclick = () => { [...chosen.values()].filter(st => st.chain === x.dataset.chain).forEach(st => chosen.delete(st.id)); const i = pending.findIndex(c => c.slug === x.dataset.chain); if (i >= 0) pending.splice(i, 1); paintSel(); paintDd(); });
+      el.querySelector('#go').textContent = `Continue with ${n} ${plural(n, 'location', 'locations')}`;
     }
-    async function pick(c){ if (!c) return; if (extra && S.chain && c.slug === S.chain.slug) return; me(c.name); const full = await fetch(`/api/lookup?chain=${encodeURIComponent(c.slug)}&places=1`).then(r => r.json()); done(full); }
+    function paintDd(){
+      const v = lastQ; if (!v) return;
+      if (!R.chains.length && !R.stores.length) { dd.innerHTML = `<div class="empty">No authorized-to-open store matches "${esc(v)}". Only stores the AGCO has authorized to open can join right now.<br><a href="#" id="waitlist">Not on the list? Leave your details</a> and we'll reach out the day you're authorized.</div>`; const w = dd.querySelector('#waitlist'); if (w) w.onclick = (e) => { e.preventDefault(); done({ waitlist: v }); }; return; }
+      const inChain = slug => R.stores.filter(x => x.chain === slug);
+      const chainDone = c => (pending.some(p => p.slug === c.slug) || c.ids.every(id => chosen.has(id)));
+      let html = '';
+      const multi = R.chains.filter(c => c.ids.length > 1);
+      if (multi.length || R.chains.length > 1) {
+        html += `<div class="sec">Everything that matches — tap to add the whole group</div>`;
+        if (R.chains.length > 1 && R.all.count > 1) { const every = R.chains.every(chainDone); html += `<div class="it every${every ? ' added' : ''}" data-all="1"><span class="rb${every ? ' on' : ''}"></span><span class="t"><b>Everything matching “${esc(v)}”</b><small>${R.all.count} ${plural(R.all.count, 'location', 'locations')} filed under ${R.all.names} different ${plural(R.all.names, 'name', 'names')}</small></span><span class="add">${every ? 'added' : '+ ' + R.all.count}</span></div>`; }
+        multi.forEach((c, i) => { const on = chainDone(c); html += `<div class="it${on ? ' added' : ''}" data-c="${i}"><span class="rb${on ? ' on' : ''}"></span><span class="t"><b>${esc(c.name)}</b><small>${esc(c.sample.join(', '))}${c.ids.length > 3 ? ' and more' : ''}</small></span><span class="add">${on ? 'added' : '+ ' + c.ids.length}</span></div>`; });
+      }
+      html += `<div class="sec">One location at a time${R.stores.length > 1 ? ' — tick several to add them together' : ''}</div>`;
+      R.stores.forEach((st, i) => { const on = chosen.has(st.id); html += `<div class="it${on ? ' added' : ''}${ticked.has(st.id) ? ' on' : ''}" data-s="${i}"><span class="rb${on || ticked.has(st.id) ? ' on' : ''}" data-tick="${esc(st.id)}"></span><span class="t"><b>${esc(titleCase(st.name))}</b><small>${esc(titleCase(st.addr))} · ${esc(st.city)}</small></span><span class="add">${on ? 'added' : '+ add'}</span></div>`; });
+      if (ticked.size) html += `<div class="dd-bar"><button class="btn sm" id="addTicked">Add ${ticked.size} ticked</button><button class="btn ghost sm" id="unTick">Untick</button></div>`;
+      dd.innerHTML = html;
+      dd.querySelector('[data-all]')?.addEventListener('click', () => { R.chains.forEach(addChain); after(); });
+      dd.querySelectorAll('[data-c]').forEach(it => it.onclick = () => { addChain(multi[+it.dataset.c]); after(); });
+      dd.querySelectorAll('[data-s]').forEach(it => it.onclick = (e) => { const st = R.stores[+it.dataset.s]; if (e.target.closest('[data-tick]') && !chosen.has(st.id)) { ticked.has(st.id) ? ticked.delete(st.id) : ticked.add(st.id); paintDd(); return; } chosen.has(st.id) ? chosen.delete(st.id) : add(st); ticked.delete(st.id); after(); });
+      const ab = dd.querySelector('#addTicked'); if (ab) ab.onclick = () => { ticked.forEach(id => { const st = R.stores.find(x => x.id === id); if (st) add(st); }); ticked.clear(); after(); };
+      const ub = dd.querySelector('#unTick'); if (ub) ub.onclick = () => { ticked.clear(); paintDd(); };
+    }
+    function after(){ paintSel(); paintDd(); q.focus(); }
+    async function run(){
+      const v = q.value.trim(); if (v.length < 2) { dd.style.display = 'none'; lastQ = ''; return; }
+      const r = await fetch('/api/lookup?q=' + encodeURIComponent(v)).then(r => r.json()).catch(() => ({}));
+      R = { chains: r.chains || r.results || [], stores: r.stores || [], all: r.all || { count: 0, names: 0 } }; lastQ = v; cursor = -1; ticked.clear(); dd.style.display = 'block'; paintDd();
+    }
     q.oninput = () => { clearTimeout(t); t = setTimeout(run, 160); };
-    q.onkeydown = (e) => { const its = dd.querySelectorAll('.it'); if (e.key === 'ArrowDown') cursor = Math.min(cursor + 1, its.length - 1); else if (e.key === 'ArrowUp') cursor = Math.max(cursor - 1, 0); else if (e.key === 'Enter') { e.preventDefault(); pick(results[cursor >= 0 ? cursor : 0]); return; } else return; its.forEach((x, i) => x.classList.toggle('on', i === cursor)); };
+    q.onkeydown = (e) => { const its = dd.querySelectorAll('.it'); if (e.key === 'ArrowDown') cursor = Math.min(cursor + 1, its.length - 1); else if (e.key === 'ArrowUp') cursor = Math.max(cursor - 1, 0); else if (e.key === 'Enter') { e.preventDefault(); const it = its[cursor >= 0 ? cursor : 0]; if (it) it.click(); else if (chosen.size || pending.length) el.querySelector('#go').click(); return; } else if (e.key === 'Escape') { dd.style.display = 'none'; return; } else return; its.forEach((x, i) => x.classList.toggle('on', i === cursor)); };
+    el.querySelector('#clr').onclick = () => { chosen.clear(); pending.length = 0; after(); };
+    el.querySelector('#go').onclick = async () => {
+      const go = el.querySelector('#go'); go.disabled = true; go.textContent = 'One moment…';
+      // Chains involved, in order of how many locations were chosen from each.
+      const slugs = {}; chosen.forEach(st => { slugs[st.chain] = (slugs[st.chain] || 0) + 1; }); pending.forEach(c => { slugs[c.slug] = (slugs[c.slug] || 0) + c.ids.length; });
+      const order = Object.keys(slugs).sort((a, b) => slugs[b] - slugs[a]);
+      const full = {}; await Promise.all(order.map(async (slug, i) => { full[slug] = await fetch(`/api/lookup?chain=${encodeURIComponent(slug)}${i === 0 && !extra ? '&places=1' : ''}`).then(r => r.json()); }));
+      const ids = new Set(chosen.keys()); pending.forEach(c => (full[c.slug] && full[c.slug].stores || []).forEach(st => ids.add(st.id)));
+      const n = ids.size; me(n === 1 ? `${titleCase([...chosen.values()][0].name)}` : `${n} locations${order.length > 1 ? ` across ${order.length} groups` : ''}`);
+      done({ chains: order.map(s => full[s]), ids: [...ids], already });
+    };
     setTimeout(() => q.focus(), 50);
+    if (extra) paintSel();
   });
-  if (chain.waitlist) return waitlist(chain.waitlist);
+  if (picked.waitlist) return waitlist(picked.waitlist);
   if (extra) {
-    if (!S.extraChains.find(c => c.slug === chain.slug)) S.extraChains.push(chain);
-    chain.stores.forEach(s => { if (!S.selected.includes(s.id)) S.selected.push(s.id); });
+    picked.chains.forEach(c => { if (c.slug !== S.chain.slug && !S.extraChains.find(x => x.slug === c.slug)) S.extraChains.push(c); });
+    S.selected = picked.ids.filter(id => allStores().some(s => s.id === id));
     renderRecord(); save();
-    await typing(250); say(`Added <b>${esc(chain.name)}</b> — ${chain.count} ${plural(chain.count, 'location', 'locations')}. Untick any you don't want below.`);
+    const added = picked.ids.filter(id => !picked.already.has(id)).length;
+    await typing(250); say(added ? `Added <b>${added} ${plural(added, 'location', 'locations')}</b>. Untick any you don't want below.` : 'Here\'s everything so far. Untick any you don\'t want below.');
     return locations(true);
   }
-  S.chain = chain; S.extraChains = []; S.selected = []; S.groups = []; S.overrides = {}; S.entryStoreId = null;
+  S.chain = picked.chains[0]; S.extraChains = picked.chains.slice(1); S.selected = picked.ids; S.groups = []; S.overrides = {}; S.entryStoreId = null;
   renderRecord(); save();
   return confirmStore();
 }
@@ -383,7 +447,12 @@ async function waitlist(typed){
 async function confirmStore(){
   const c = S.chain, p = c.places || {}; const cities = [...new Set(c.stores.map(s => s.city))];
   await typing(400);
-  say(`Here's what I've got. <b>${esc(c.name)}</b>, ${c.count} ${plural(c.count, 'location', 'locations')}${c.count > 1 ? ` across ${cities.length} ${plural(cities.length, 'city', 'cities')}` : ' in ' + esc(cities[0])}. AGCO status: <b>Authorized to Open</b>.`);
+  const chains = [c, ...S.extraChains]; const picked = S.selected.length ? allStores().filter(s => S.selected.includes(s.id)) : [];
+  if (picked.length && (chains.length > 1 || picked.length < c.count)) {
+    const parts = chains.map(x => ({ name: x.name, n: x.stores.filter(s => S.selected.includes(s.id)).length, total: x.count })).filter(x => x.n);
+    const pc = [...new Set(picked.map(s => s.city))];
+    say(`Here's what I've got. <b>${picked.length} ${plural(picked.length, 'location', 'locations')}</b>${picked.length > 1 ? ` across ${pc.length} ${plural(pc.length, 'city', 'cities')}` : ` in ${esc(pc[0])}`} — ${parts.map(x => `<b>${esc(x.name)}</b> (${x.n === x.total ? (x.total === 1 ? '1' : 'all ' + x.total) : x.n + ' of ' + x.total})`).join(', ')}. AGCO status: <b>Authorized to Open</b>.`);
+  } else say(`Here's what I've got. <b>${esc(c.name)}</b>, ${c.count} ${plural(c.count, 'location', 'locations')}${c.count > 1 ? ` across ${cities.length} ${plural(cities.length, 'city', 'cities')}` : ' in ' + esc(cities[0])}. AGCO status: <b>Authorized to Open</b>.`);
   if (p.rating) { await typing(250); say(`Google has you at <b>${p.rating} ★</b> across ${p.ratings} reviews.`); }
   await typing(250);
   say('You can correct anything later in your admin panel. Does it look right as a starting point?');
@@ -467,7 +536,8 @@ async function locations(returning, prompt){
   if (!returning) {
     await typing(300);
     if (stores.length === 1) { S.selected = [stores[0].id]; renderRecord(); say(`One location — <b>${esc(titleCase(stores[0].addr))}, ${esc(stores[0].city)}</b>. That's the one we'll set up.`); return afterPick(); }
-    say('Which locations are we setting up? Pick one, a few, or all of them. You can group stores — by region, or however you run them — and the groups carry through to your agreement and admin panel.');
+    if (S.selected.length) say(`Here's your pick — <b>${S.selected.length} of ${stores.length}</b>. Tick or untick anything, and group stores by region or however you run them; the groups carry through to your agreement and admin panel.`);
+    else say('Which locations are we setting up? Pick one, a few, or all of them. You can group stores — by region, or however you run them — and the groups carry through to your agreement and admin panel.');
   } else if (prompt) { await typing(250); say(prompt); }
   await control((el, done) => renderPicker(el, done));
   renderRecord(); save();
