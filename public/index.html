@@ -178,7 +178,7 @@ footer i{width:6px;height:6px;border-radius:50%;background:var(--green)}
 footer a{color:var(--muted);text-decoration:none}footer a:hover{color:var(--ink)}
 @media (max-width:900px){
   .grid{grid-template-columns:1fr}.rec{position:static}.wrap{padding:18px 16px 50px}.rectoggle{display:block;margin:0 0 12px}.rec.collapsed{display:none}
-  .progress .bar{width:70px}.ba,.choice{grid-template-columns:1fr}.row2,.row2.em{grid-template-columns:1fr}.row2.code{grid-template-columns:1fr auto}
+  .progress .bar{width:100px}.top{flex-direction:column;align-items:flex-start;gap:8px}.ba,.choice{grid-template-columns:1fr}.row2,.row2.em{grid-template-columns:1fr}.row2.code{grid-template-columns:1fr auto}
 }
 </style>
 </head>
@@ -206,7 +206,7 @@ footer a{color:var(--muted);text-decoration:none}footer a:hover{color:var(--ink)
     </aside>
   </div>
 </div>
-<footer><span><i></i>Licensed Ontario retailers only</span><span><i></i>No charge until you go live</span><span><i></i>Cancel any time</span><span><a href="https://business.poof.ca/terms" target="_blank" rel="noopener">Agreement &amp; schedules</a></span><span><a href="mailto:baz@poof.ca">baz@poof.ca</a></span></footer>
+<footer><span><i></i>Licensed Ontario retailers only</span><span><i></i>No charge until you go live</span><span><i></i>Cancel any time</span><span><a href="https://business.poof.ca/terms" target="_blank" rel="noopener">Agreement &amp; schedules</a></span><span><a href="mailto:contact@poof.ca">contact@poof.ca</a></span></footer>
 <div class="modal" id="mapModal"><div class="mbox">
   <button class="mclose" id="mapClose" aria-label="Close">×</button>
   <h3>Your coverage on the marketplace</h3>
@@ -377,7 +377,7 @@ async function waitlist(typed){
       me(email); done(true);
     };
   });
-  say('<span class="ok">✓</span> Got it. We\'ll be in touch. In the meantime, <a href="https://business.poof.ca/retailers">here\'s how Poof works for retailers</a>.');
+  say('<span class="ok">✓</span> Got it. We\'ll be in touch. In the meantime, <a href="https://business.poof.ca/retailers">here\'s how Poof works for retailers</a>, or <a href="mailto:contact@poof.ca">email us</a>.');
 }
 
 async function confirmStore(){
@@ -426,7 +426,7 @@ async function pricing(){
   await typing(350);
   say(`<b>${money(CFG.priceCad)} per location, per month</b>, plus HST. No revenue share, no cut of orders. Nothing charged until you approve your menu and go live.${CFG.offer ? ` <span class="offer" style="margin-left:4px"><i></i>${offerText()} when you add a card during signup · until ${offerUntil()}</span>` : ''}`);
   const proof = [];
-  if (CFG.brands && CFG.brands.length) proof.push(`<div class="proof"><small>Brands funding campaigns</small>${CFG.brands.map(b => `<span>${esc(b)}</span>`).join('')}</div>`);
+  if (CFG.brands && CFG.brands.length) proof.push(`<div class="proof"><small>1,800+ Ontario stores listed · brands funding campaigns</small>${CFG.brands.map(b => `<span>${esc(b)}</span>`).join('')}</div>`);
   if (CFG.testimonial) proof.push(`<div class="quote">“${esc(CFG.testimonial.quote)}”<small>— ${esc(CFG.testimonial.name)}, ${esc(CFG.testimonial.store)}</small></div>`);
   if (proof.length) say(proof.join(''), 'wide');
   const v = await buttons([['Sounds good — keep going', true], ['I have a question first', false, true]]);
@@ -434,7 +434,7 @@ async function pricing(){
     track('onb_question');
     say(`<div class="faq"><details><summary>Can I cancel?</summary><p>Yes, any time, month to month. See the Payments, Cancellation and Refund Policy at <a href="${CFG.termsUrl}" target="_blank" rel="noopener">${CFG.termsUrl.replace('https://', '')}</a>.</p></details><details><summary>What does my POS need to do?</summary><p>Nothing on your side. We contact your POS and payment provider with you copied, and they switch on the connection. Cova, Greenline, Blaze and Dutchie are all supported.</p></details><details><summary>Who handles the orders?</summary><p>You do, in your POS, like any other online order. Poof routes the shopper to your checkout; the sale, the ID check and the handoff are yours.</p></details><details><summary>Do you take a cut?</summary><p>No. ${money(CFG.priceCad)}/location/month flat. Brands pay for campaigns separately.</p></details><details><summary>Why do you need a card before I'm live?</summary><p>So launch day isn't held up chasing payment details. Nothing is charged until you approve your menu${CFG.offer ? `, and adding it now gets you ${offerText()}` : ''}. You can also skip it and give it to us on the setup call.</p></details></div>`, 'wide');
     await control((el, done) => {
-      el.innerHTML = `<div class="actions"><button class="btn" id="go">Got it — keep going</button>${CFG.sms ? `<a class="btn ghost" href="sms:${esc(CFG.sms)}?&body=${encodeURIComponent('Hi Baz, quick question about Poof for ' + storeName() + ': ')}" id="sms">Text Baz</a>` : ''}${CFG.calendly ? `<a class="btn ghost" href="${esc(CFG.calendly)}" target="_blank" rel="noopener" id="call">Book 10 min</a>` : ''}</div><div class="hint">Rather talk it through? Baz answers texts fast. Your progress is saved either way.</div>`;
+      el.innerHTML = `<div class="actions"><button class="btn" id="go">Got it — keep going</button>${CFG.sms ? `<a class="btn ghost" href="sms:${esc(CFG.sms)}?&body=${encodeURIComponent('Hi Poof, quick question about ' + storeName() + ': ')}" id="sms">Text us</a>` : ''}${CFG.calendly ? `<a class="btn ghost" href="${esc(CFG.calendly)}" target="_blank" rel="noopener" id="call">Book 10 min</a>` : ''}</div><div class="hint">Rather talk it through? We answer fast, and your progress is saved either way.</div>`;
       el.querySelector('#go').onclick = () => { me('Got it'); done(true); };
       const sm = el.querySelector('#sms'); if (sm) sm.onclick = () => track('onb_exit_sms');
       const cl = el.querySelector('#call'); if (cl) cl.onclick = () => track('onb_exit_call');
@@ -523,7 +523,7 @@ function renderPicker(el, done){
 async function systems(){
   setStep(2);
   await typing(300);
-  say('What are you running? We use this to contact the right people — nothing to install on your side.');
+  say('What are you running? We\'ll contact your providers directly — nothing to install on your side.');
   const sy = S.systems;
   await control((el, done) => {
     const chipRow = (id, list, cur) => `<div class="chips" id="${id}">${list.map(x => `<button class="chip${cur === x ? ' on' : ''}" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div><input class="in" id="${id}Other" placeholder="Which one?" style="display:${cur && !list.includes(cur) ? 'block' : 'none'};margin-top:8px" value="${cur && !list.includes(cur) ? esc(cur) : ''}">`;
@@ -614,15 +614,15 @@ async function card(){
   say(`Last step — the card we'll keep on file for go-live. <b>Nothing is charged today.</b> You'll see your menu configured and approve it before the first invoice.`);
   const value = CFG.offer ? CFG.offer.months * monthly() : 0;
   const choice = await control((el, done) => {
-    el.innerHTML = `<div class="choice"><div class="pri" id="cAdd"><b>Add card now</b>${CFG.offer ? `<div class="big">${offerText()}</div><small>Worth ${money(value)} on ${n} ${plural(n, 'location', 'locations')}. Applied at go-live. Offer ends ${offerUntil()}.</small>` : '<small>So launch day isn\'t held up chasing payment details.</small>'}</div><div id="cSkip"><b>Skip for now</b><small>Give it to us on the setup call.${CFG.offer ? ` Standard pricing — ${money(CFG.priceCad)}/location from go-live, no free months.` : ''}</small></div></div>`;
+    el.innerHTML = `<div class="choice"><div class="pri" id="cAdd"><b>Add card now</b>${CFG.offer ? `<div class="big">${offerText()}</div><small>Worth ${money(value)} on ${n} ${plural(n, 'location', 'locations')}. Applied at go-live. Offer ends ${offerUntil()}.</small>` : '<small>So launch day isn\'t held up chasing payment details.</small>'}</div><div id="cSkip"><b>Skip for now</b><small>Add it on the setup call instead. Standard pricing from go-live.</small></div></div>`;
     el.querySelector('#cAdd').onclick = () => { me('Add card now'); done('add'); };
     el.querySelector('#cSkip').onclick = () => { me('Skip for now'); done('skip'); };
   });
   if (choice === 'skip') {
     if (CFG.offer) {
       await typing(200);
-      say(`Just checking — skipping means passing on <b>${offerText()}</b> (${money(value)}). Still skip?`);
-      const sure = await buttons([['Add the card after all', 'add'], ['Yes, skip — I\'ll give it on the call', 'skip', true]]);
+      say(`Heads-up: the <b>${offerText()}</b> needs a card during signup. If you'd rather add it on the call, just ask — we're easy.`);
+      const sure = await buttons([['Add the card', 'add'], ['Skip — I\'ll ask on the call', 'skip', true]]);
       if (sure === 'add') return cardForm(si);
     }
     S.cardSkipped = true; track('onb_card_skipped');
@@ -662,8 +662,8 @@ async function success(acc){
   track('onb_complete', { card: S.cardSkipped ? 'skipped' : 'saved', offer: acc.offer ? 'yes' : 'no' }); lead('completed');
   await typing(250);
   say('<h2 style="margin:4px 0 0;font-size:24px">You\'re in.</h2>', 'wide');
-  say(`Welcome to the Poof family, ${esc(S.owner.name.split(' ')[0])}. ${acc.mail && acc.mail.retailer ? 'Your order form is in your inbox.' : 'Your order form is ready below.'}${acc.offer ? ` <b>${acc.offer.months} months free</b> is locked in for go-live.` : ''}`);
-  say(`<div class="steps"><div class="ok"><i></i><p style="margin:0"><b>Signed up</b><span>Agreement accepted${S.cardSkipped ? '' : ', card on file'}, order form issued.</span></p></div><div class="now"><i></i><p style="margin:0"><b>Baz reaches out</b><span>Within one business day, to walk you through it${S.cardSkipped ? ' and take your card' : ''}.</span></p></div><div><i></i><p style="margin:0"><b>We connect your systems</b><span>We contact ${esc(partnerList())}, with you copied.</span></p></div><div><i></i><p style="margin:0"><b>Your admin panel</b><span>Login sent, menu configured, ready for your approval.</span></p></div><div><i></i><p style="margin:0"><b>Go live</b><span>You approve, we launch, and the first invoice starts.</span></p></div></div>`, 'wide');
+  say(`Welcome to Poof, ${esc(S.owner.name.split(' ')[0])}. ${acc.mail && acc.mail.retailer ? 'Your order form is in your inbox.' : 'Your order form is ready below.'}${acc.offer ? ` <b>${acc.offer.months} months free</b> is locked in for go-live.` : ''}`);
+  say(`<div class="steps"><div class="ok"><i></i><p style="margin:0"><b>Signed up</b><span>Agreement accepted${S.cardSkipped ? '' : ', card on file'}, order form issued.</span></p></div><div class="now"><i></i><p style="margin:0"><b>Our team reaches out</b><span>Within one business day, to walk you through it${S.cardSkipped ? ' and take your card details' : ''}.</span></p></div><div><i></i><p style="margin:0"><b>We connect your systems</b><span>We contact ${esc(partnerList())}, with you copied.</span></p></div><div><i></i><p style="margin:0"><b>Your admin panel</b><span>Login sent, menu configured, ready for your approval.</span></p></div><div><i></i><p style="margin:0"><b>Go live</b><span>You approve, we launch, and the first invoice starts.</span></p></div></div>`, 'wide');
   ctl.innerHTML = `<div class="actions"><a class="btn" href="${esc(S.orderFormUrl)}" target="_blank" rel="noopener">Download your order form</a><button class="btn ghost" id="mapBtn">Preview my coverage</button><a class="btn ghost" href="https://business.poof.ca">Open business.poof.ca</a></div>`;
   $('mapBtn').onclick = showMap;
   clearSave();
