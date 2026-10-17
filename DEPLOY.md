@@ -33,7 +33,8 @@ Set every one for **Production** (and Preview if you want test deploys).
 | `STRIPE_PUBLISHABLE_KEY` | `pk_live_…` from the same page | Yes |
 | `ADMIN_KEY` | Run `openssl rand -hex 24` (or any 40+ random characters). Used only by `/api/activate`. | Yes |
 | `SITE_URL` | `https://onboarding.poof.ca` | Yes |
-| `RESEND_API_KEY` | resend.com → API Keys. Also **verify the poof.ca domain** there (add the DNS records it gives you in Cloudflare) so mail goes out from baz@poof.ca. | For retailer emails + PDF attachment |
+| `SENDGRID_API_KEY` | app.sendgrid.com → Settings → API Keys → Create (Restricted: Mail Send = Full Access). poof.ca is already authenticated there, so no DNS. Set `FROM_EMAIL` to an address on the authenticated domain. | For retailer emails + PDF attachment |
+| `RESEND_API_KEY` | Alternative to SendGrid (resend.com → API Keys; needs the poof.ca domain verified there). Ignored when SendGrid is set. | Optional |
 | `WEB3FORMS_KEY` | `beb20837-c504-485a-8f38-48a731659bf7` (the key signup.poof.ca already uses) — sends the internal notification to onboarding@poof.ca | Recommended |
 | `MAPTILER_KEY` | `fdArbsM1NtC7P77ESC0c` (from join.poof.ca) — nicer map tiles. Without it the map falls back to free CARTO tiles. | Optional |
 | `GOOGLE_PLACES_KEY` | Google Cloud → APIs → Places API → key. Adds rating, hours, phone to the store record. | Optional |
