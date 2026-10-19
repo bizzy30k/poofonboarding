@@ -47,7 +47,7 @@ module.exports = async (req, res) => {
     // Abuse brakes: per IP and per email. 'agreement'/'completed' additionally need the session token,
     // so nobody can fire a fake "completed" to pull a real lead out of the retargeting flow.
     if (!sec.rateLimit(`lead:ip:${ip}`, 8, 60e3) || !sec.rateLimit(`lead:em:${email}`, 12, 3600e3)) return sec.tooMany(res);
-    if ((stage === 'agreement' || stage === 'completed') && !sec.checkSession(b.customerId, b.session)) return res.status(403).json({ error: 'Session expired.' });
+    if (stage === 'completed' && !sec.checkSession(b.customerId, b.session)) return res.status(403).json({ error: 'Session expired.' });
 
     const chain = sec.v.slug(b.chain) ? stores.chain(b.chain) : null;
     const storeName = sec.v.optStr(b.storeName, 120) || (chain ? chain.name : '');
@@ -64,7 +64,7 @@ module.exports = async (req, res) => {
         x: (Array.isArray(st.extra) ? st.extra : []).filter(sec.v.slug).slice(0, 10),
         s: sec.v.crsaList(st.selected) || [],
         g: (Array.isArray(st.groups) ? st.groups : []).slice(0, 20).map(g => ({ name: sec.v.optStr(g && g.name, 60) || '', ids: sec.v.crsaList(g && g.ids) || [] })),
-        y: st.systems && typeof st.systems === 'object' ? st.systems : null,
+        y: st.systems && typeof st.systems === 'object' ? { pos: sec.v.optStr(st.systems.pos, 60) || '', processor: sec.v.optStr(st.systems.processor, 60) || '', ecommerce: sec.v.optStr(st.systems.ecommerce, 60) || '', delivery: st.systems.delivery == null ? null : !!st.systems.delivery, deliverySoftware: sec.v.optStr(st.systems.deliverySoftware, 60) || '' } : null,
         o: st.owner && typeof st.owner === 'object' ? { name: sec.v.optStr(st.owner.name, 120) || '', email, mobile: sec.v.optStr(st.owner.mobile, 30) || '' } : null,
         r: st.referral && sec.v.str(st.referral.code, 32) ? { code: st.referral.code } : null,
         t: Date.now(),

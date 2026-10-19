@@ -12,7 +12,7 @@
 // curl -X POST https://onboarding.poof.ca/api/activate \
 //   -H "x-admin-key: $ADMIN_KEY" -H "Content-Type: application/json" \
 //   -d '{"customerId":"cus_123"}'
-const Stripe = require('stripe');
+const { stripeClient } = require('../lib/stripe');
 const config = require('../lib/config');
 const record = require('../lib/record');
 const { findConflicts } = require('../lib/conflicts');
@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!sec.requireAdmin(req, res)) return;
   if (!sec.rateLimit(`admin:${sec.clientIp(req)}`, 30, 60e3)) return sec.tooMany(res);
-  const stripe = new Stripe(config.STRIPE_SECRET_KEY);
+  const stripe = stripeClient();
   try {
     const body = sec.body(req) || {};
     const { customerId, referralCode, locations, force } = body;
@@ -39,13 +39,13 @@ module.exports = async (req, res) => {
     if (!qty) return res.status(400).json({ error: 'No matching locations.' });
 
     // Franchise guard: refuse doors already live elsewhere unless forced. Fails CLOSED if the check itself fails.
-    const guard = await findConflicts(stripe, ids, customerId);
+    const guard = await findConflicts(stripe, ids, customerId, rec.owner && rec.owner.email);
     if (!guard.ok && !force) return res.status(503).json({ error: 'Could not verify other accounts for these doors (Stripe search failed). Retry, or pass force:true.' });
     const conflicts = guard.conflicts.filter(c => /live/i.test(c.stage));
     if (conflicts.length && !force) return res.status(409).json({ error: 'Some doors are already live on another account. Pass force:true to activate anyway.', conflicts });
 
     let promo = null, promoSource = null;
-    const codes = [[(referralCode || rec.referral?.code || '').toUpperCase(), 'referral'], [rec.offer ? rec.offer.code : '', 'launch offer']];
+    const codes = [[String(typeof referralCode === 'string' ? referralCode : (rec.referral?.code || '')).toUpperCase().slice(0, 32), 'referral'], [rec.offer ? rec.offer.code : '', 'launch offer']];
     for (const [code, src] of codes) {
       if (!code) continue;
       const list = await stripe.promotionCodes.list({ code, active: true, limit: 1 });

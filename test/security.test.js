@@ -65,7 +65,7 @@ test('setup-intent: creates customer, dedupes licences, returns session token', 
 });
 
 test('setup-intent: rejects garbage input (type/length/email)', async () => {
-  const b = goodBody(); b.owner.email = 'not-an-email'; b.systems.pos = '<script>'; b.owner.name = 'x'.repeat(500);
+  const b = goodBody(); b.owner.email = 'not-an-email'; b.systems.pos = 'x'.repeat(61); b.owner.name = 'x'.repeat(500);
   const r = await call(setupIntent, { body: b });
   assert.equal(r.code, 400);
   assert.ok(r.body.fields.includes('owner.email') && r.body.fields.includes('systems.pos') && r.body.fields.includes('owner.name'));
@@ -151,4 +151,80 @@ test('production refuses to run without SIGNING_SECRET', () => {
   const saved = process.env.SIGNING_SECRET; delete process.env.SIGNING_SECRET;
   assert.throws(() => config.signingSecret(), /SIGNING_SECRET/);
   process.env.SIGNING_SECRET = saved;
+});
+
+// ---- Added after second audit -------------------------------------------------
+
+test('C0 regression: "Other" free-text systems are accepted', async () => {
+  const b = goodBody(); b.systems = { pos: 'Square', processor: 'Helcim', ecommerce: 'Shopify', delivery: true, deliverySoftware: 'Trexity' };
+  const r = await call(setupIntent, { body: b });
+  assert.equal(r.code, 200, JSON.stringify(r.body));
+  const c = await stripeMock.customers.retrieve(r.body.customerId);
+  assert.equal(c.metadata.pos, 'Square');
+});
+
+test('S2: lead per-email limit trips independently of IP; agreement stage allowed pre-customer', async () => {
+  let last;
+  for (let i = 0; i < 14; i++) last = await call(lead, { body: { email: 'same@example.com', stage: 'locations', chain: 'sessions-cannabis' }, headers: { ip: `10.0.0.${i}` } });
+  assert.equal(last.code, 429);
+  const ag = await call(lead, { body: { email: 'agree@example.com', stage: 'agreement', chain: 'sessions-cannabis' }, headers: { ip: '10.1.1.1' } });
+  assert.equal(ag.code, 200);
+});
+
+test('S9: origin handling — malformed Referer, null origin, Referer-only, preview hosts', async () => {
+  assert.notEqual((await call(setupIntent, { body: goodBody(), headers: { origin: undefined, referer: 'not a url' } })).code, 500, 'malformed referer must not 500');
+  assert.equal((await call(setupIntent, { body: goodBody(), headers: { origin: 'null', referer: 'https://evil.example/x' } })).code, 403);
+  assert.equal((await call(setupIntent, { body: goodBody(), headers: { origin: undefined, referer: 'https://evil.example/x' } })).code, 403);
+  assert.equal((await call(setupIntent, { body: goodBody(), headers: { origin: 'https://poofonboarding-abc123-bizzy30ks-projects.vercel.app' } })).code, 200);
+  assert.equal((await call(setupIntent, { body: goodBody(), headers: { origin: 'https://poof-onboarding.vercel.app' } })).code, 200);
+});
+
+test('S3: admin compare uses timingSafeEqual (not ===)', () => {
+  const src = require('fs').readFileSync(require.resolve('../lib/security'), 'utf8');
+  assert.match(src, /timingSafeEqual/);
+  assert.ok(!/key\s*===\s*config\.ADMIN_KEY/.test(src));
+  assert.equal(sec.safeEqual('abc', 'abc'), true); assert.equal(sec.safeEqual('abc', 'abd'), false); assert.equal(sec.safeEqual('abc', 'abcd'), false);
+});
+
+test('C3: a retailer\'s own earlier attempt is not a franchise conflict; a rival is', async () => {
+  const { findConflicts } = require('../lib/conflicts');
+  const a = await call(setupIntent, { body: goodBody() });
+  const b = await call(setupIntent, { body: goodBody() }); // same owner email, same door
+  const g1 = await findConflicts(stripeMock, ['CRSA1537578'], b.body.customerId, 'owner@example.com');
+  assert.equal(g1.ok, true); assert.equal(g1.conflicts.some(c => c.customerId === a.body.customerId), false);
+  const rival = goodBody(); rival.owner.email = 'rival@example.com';
+  const r = await call(setupIntent, { body: rival });
+  const g2 = await findConflicts(stripeMock, ['CRSA1537578'], r.body.customerId, 'rival@example.com');
+  assert.ok(g2.conflicts.length >= 1);
+  assert.equal(g2.conflicts[0].email, undefined, 'no cross-customer email stored');
+});
+
+test('M7: prototype-key slugs do not crash store lookups', () => {
+  const stores = require('../lib/stores');
+  assert.equal(stores.chain('constructor'), undefined);
+  assert.equal(stores.store('__proto__'), undefined);
+});
+
+test('C2: metadata budget — 50-door chain with many groups fits under 50 keys', () => {
+  const record = require('../lib/record');
+  const stores = require('../lib/stores');
+  const sessions = stores.chain('sessions-cannabis');
+  const locs = sessions.stores.map(s => ({ id: s.id }));
+  const groups = Array.from({ length: 20 }, (_, i) => ({ name: `Region ${i}`, ids: locs.slice(i * 2, i * 2 + 3).map(l => l.id) }));
+  const rec = { store: { chain: 'sessions-cannabis', chainName: 'Sessions Cannabis' }, locations: locs, groups, systems: { pos: 'Cova' }, owner: { name: 'A B', email: 'a@b.co' }, acceptance: { name: 'A B', title: 'Owner', at: new Date().toISOString(), termsHash: 'x'.repeat(64) },
+    conflicts: Array.from({ length: 5 }, (_, i) => ({ customerId: `cus_${i}`, stage: 'Live', overlap: locs.slice(0, 50).map(l => l.id) })) };
+  const meta = record.pack(rec);
+  assert.ok(Object.keys(meta).length + 4 <= 50, `keys=${Object.keys(meta).length}`); // +3 accept keys +1 activate key
+});
+
+test('PDF: non-WinAnsi characters do not crash the order form', async () => {
+  const real = origRequire.call(module, '../lib/orderform');
+  // reload the un-stubbed module
+  delete require.cache[require.resolve('../lib/orderform')];
+  const { buildOrderForm } = require('../lib/orderform');
+  const stores = require('../lib/stores'); const s = stores.store('CRSA1537578');
+  const rec = { store: { chain: 'sessions-cannabis', chainName: 'Sessions 🌿 Cannabis' }, locations: [s], groups: [], systems: { pos: 'Cova' }, owner: { name: 'Nguyễn Văn A', email: 'a@b.co', mobile: '' }, referral: null,
+    acceptance: { name: 'Nguyễn Văn A', title: 'Propriétaire', at: new Date().toISOString(), ip: '1.1.1.1', termsVersion: '2026-08-15', termsUrl: 'https://business.poof.ca/terms', termsHash: 'abc', locationCount: 1 }, customerId: 'cus_pdf' };
+  const pdf = await buildOrderForm(rec);
+  assert.ok(Buffer.isBuffer(pdf) || pdf instanceof Uint8Array); assert.ok(pdf.length > 1000);
 });

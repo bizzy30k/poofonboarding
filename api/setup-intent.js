@@ -6,17 +6,12 @@
 // Security model: the response carries a `session` token (HMAC of the customer id).
 // Any later call that names a customerId — here, /api/accept, /api/lead — must present
 // it. Customer ids appear in emails and URLs; the session token never does.
-const Stripe = require('stripe');
+const { stripeClient } = require('../lib/stripe');
 const config = require('../lib/config');
 const record = require('../lib/record');
 const stores = require('../lib/stores');
 const sec = require('../lib/security');
 
-const POS = ['Cova', 'Greenline', 'Blaze', 'Dutchie POS', 'Tendy', 'Other'];
-const PROC = ['Merrco', 'Moneris', 'Clover', 'Other'];
-const ECOM = ['Dutchie', 'Breadstack', 'Buddi', 'None', 'Other'];
-const DELIV = ['Canfleet', 'Onfleet', 'In-house (no software)', 'Other'];
-const oneOf = (v, list) => (v == null || v === '') ? '' : (list.includes(v) ? v : undefined);
 
 function validate(b) {
   const v = sec.v;
@@ -33,7 +28,8 @@ function validate(b) {
     entryStoreId: b.entryStoreId ? v.crsaList([b.entryStoreId])?.[0] : null,
     locations: v.crsaList(b.locations),
     groups: Array.isArray(b.groups) && b.groups.length <= 20 ? b.groups.map(g => ({ name: v.str(g && g.name, 60), ids: v.crsaList(g && g.ids) })) : undefined,
-    systems: { pos: oneOf(sys.pos, POS), processor: oneOf(sys.processor, PROC), ecommerce: oneOf(sys.ecommerce, ECOM), delivery: sys.delivery == null ? null : !!sys.delivery, deliverySoftware: oneOf(sys.deliverySoftware, DELIV) },
+    // Chips are a fixed list but 'Other' lets the retailer type their provider — accept any short string.
+    systems: { pos: v.optStr(sys.pos, 60), processor: v.optStr(sys.processor, 60), ecommerce: v.optStr(sys.ecommerce, 60), delivery: sys.delivery == null ? null : !!sys.delivery, deliverySoftware: v.optStr(sys.deliverySoftware, 60) },
     owner: { name: v.str(owner.name, 120), email: v.email(owner.email), mobile: v.optStr(owner.mobile, 30) },
     referral: b.referral ? { code: v.str(b.referral.code, 32) } : null,
     customerId: b.customerId ? String(b.customerId) : null,
@@ -56,7 +52,7 @@ module.exports = async (req, res) => {
   if (!raw) return res.status(400).json({ error: 'Bad request.' });
   const { rec: b, bad } = validate(raw);
   if (bad.length) return res.status(400).json({ error: 'Some fields are missing or invalid.', fields: bad.slice(0, 10) });
-  const stripe = new Stripe(config.STRIPE_SECRET_KEY);
+  const stripe = stripeClient();
 
   try {
     // Re-validate locations against the AGCO index — the client only sends ids. Dedupe by licence.

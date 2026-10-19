@@ -9,7 +9,7 @@
 //  - write-once: a customer with an acceptance on file cannot be re-accepted; a retry
 //    (same setupIntent, same session) returns the existing result instead of re-running
 //  - every outbound call has a hard timeout; a slow email/webhook can't hang the retailer
-const Stripe = require('stripe');
+const { stripeClient } = require('../lib/stripe');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -50,7 +50,7 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Both boxes must be ticked and name and title filled in.' });
   }
   if (!cardSkipped && !/^seti_[A-Za-z0-9]+$/.test(setupIntentId || '')) return res.status(400).json({ error: 'Card was not saved. Please add it again.' });
-  const stripe = new Stripe(config.STRIPE_SECRET_KEY);
+  const stripe = stripeClient();
 
   try {
     const customer = await stripe.customers.retrieve(customerId);
@@ -87,7 +87,7 @@ module.exports = async (req, res) => {
     rec.offer = (si && config.offerActive()) ? { code: config.LAUNCH_OFFER.code, months: config.LAUNCH_OFFER.months, grantedAt: rec.acceptance.at } : null;
 
     // 3. Franchise guard — flag doors already on another customer (fail-open here; fail-closed at activation)
-    const guard = await findConflicts(stripe, rec.locations.map(l => l.id), customerId);
+    const guard = await findConflicts(stripe, rec.locations.map(l => l.id), customerId, rec.owner.email);
     rec.conflicts = guard.conflicts;
     rec.conflictsChecked = guard.ok;
 

@@ -1,14 +1,18 @@
 // GET /api/promo?code=BUZZD → { valid, code, description }
 // Validates a referral / promo code against Stripe so the flow never accepts
 // a code that won't apply at activation.
-const Stripe = require('stripe');
+const { stripeClient } = require('../lib/stripe');
 const config = require('../lib/config');
 
+const sec = require('../lib/security');
+
 module.exports = async (req, res) => {
+  if (req.method !== 'GET') return res.status(405).json({ valid: false });
+  if (!sec.rateLimit(`promo:${sec.clientIp(req)}`, 10, 60e3)) return sec.tooMany(res);
   const code = String((req.query || {}).code || '').trim().toUpperCase();
   if (!code || code.length > 32) return res.status(400).json({ valid: false });
   try {
-    const stripe = new Stripe(config.STRIPE_SECRET_KEY);
+    const stripe = stripeClient();
     const list = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
     const p = list.data[0];
     if (!p) return res.status(200).json({ valid: false, code });

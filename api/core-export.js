@@ -10,7 +10,7 @@
 // Response: { count, signups: [ <envelope> ] }  — envelope = lib/core.toCoreSignup,
 // i.e. { account, stores: [ <core store document> ] }, one store per CRSA.
 // Poll this nightly, or wire CORE_WEBHOOK_URL for push; same payload either way.
-const Stripe = require('stripe');
+const { stripeClient } = require('../lib/stripe');
 const config = require('../lib/config');
 const record = require('../lib/record');
 const core = require('../lib/core');
@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
   if (!sec.requireAdmin(req, res)) return;
   if (!sec.rateLimit(`admin:${sec.clientIp(req)}`, 30, 60e3)) return sec.tooMany(res);
   if (!config.STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe is not configured.' });
-  const stripe = new Stripe(config.STRIPE_SECRET_KEY);
+  const stripe = stripeClient();
   const q = req.query || {};
 
   try {
@@ -34,6 +34,7 @@ module.exports = async (req, res) => {
 
     // Single customer
     if (q.customerId) {
+      if (!/^cus_[A-Za-z0-9]+$/.test(String(q.customerId))) return res.status(400).json({ error: 'Bad customerId.' });
       const c = await stripe.customers.retrieve(String(q.customerId));
       const rec = record.unpack(c.metadata || {});
       if (!rec) return res.status(404).json({ error: 'No onboarding record on that customer.' });
@@ -64,7 +65,7 @@ module.exports = async (req, res) => {
     if (q.licenseNumber) return res.status(404).json({ error: 'No signup includes that licence.' });
     return res.status(200).json({ count: out.length, signups: out });
   } catch (err) {
-    console.error('core-export failed:', err);
+    console.error('core-export failed:', err.message);
     return res.status(500).json({ error: 'Export failed.' });
   }
 };
