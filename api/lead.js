@@ -9,6 +9,7 @@
 const config = require('../lib/config');
 const sec = require('../lib/security');
 const stores = require('../lib/stores');
+const { internalEmail } = require('../lib/mail');
 
 const STAGES = ['started', 'locations', 'systems', 'review', 'agreement', 'completed', 'waitlist'];
 
@@ -26,11 +27,6 @@ async function klaviyo(event, email, props) {
   return { ok: r.ok, status: r.status };
 }
 
-async function web3forms(fields) {
-  if (!config.WEB3FORMS_KEY) return { skipped: true };
-  const r = await sec.fetchT('https://api.web3forms.com/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ access_key: config.WEB3FORMS_KEY, ...fields }) });
-  return r.json().catch(() => ({}));
-}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -80,13 +76,12 @@ module.exports = async (req, res) => {
 
     // Internal ping on first capture and waitlist only (not every step — that's noise)
     if (stage === 'started' || stage === 'waitlist') {
-      out.internal = await web3forms({
-        subject: stage === 'waitlist' ? `Waitlist — ${storeName || 'unknown store'} (not on AGCO authorized list)` : `Onboarding started — ${storeName}`,
-        from_name: 'onboarding.poof.ca', Email: email, Name: name, Store: storeName, Chain: chain ? chain.slug : '', 'Entry store': entryStoreId, Note: sec.v.optStr(b.note, 500) || '', 'Resume link': resumeUrl || '',
+      out.internal = await internalEmail(stage === 'waitlist' ? `Waitlist — ${storeName || 'unknown store'} (not on AGCO authorized list)` : `Onboarding started — ${storeName}`, {
+        Email: email, Name: name, Store: storeName, Chain: chain ? chain.slug : '', 'Entry store': entryStoreId, Note: sec.v.optStr(b.note, 500) || '', 'Resume link': resumeUrl || '',
       }).catch(e => ({ error: e.message }));
     }
     if (out.klaviyo && out.klaviyo.error) console.error('lead: klaviyo failed', { stage, err: out.klaviyo.error });
-    if (out.internal && out.internal.error) console.error('lead: web3forms failed', { stage, err: out.internal.error });
+    if (out.internal && out.internal.error) console.error('lead: internal email failed', { stage, err: out.internal.error });
     return res.status(200).json({ ok: true, resumeUrl });
   } catch (e) {
     console.error('lead failed:', { ip, err: e.message });
