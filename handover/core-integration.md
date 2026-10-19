@@ -17,7 +17,8 @@ Set on Vercel: `CORE_WEBHOOK_URL=https://api.poof.ca/v1/…/onboarding` and `COR
 | Header | Value |
 |---|---|
 | `x-poof-event` | `signup.accepted` (agreement + card/skip done) · `signup.activated` (go-live; `stores[]` = only the activated doors) |
-| `x-poof-signature` | hex HMAC-SHA256 of the **raw body** with `CORE_WEBHOOK_SECRET` |
+| `x-poof-id` | UUID of this delivery (also `id` inside the signed body) — dedupe on it; a repeat is a replay or our retry |
+| `x-poof-signature` | hex HMAC-SHA256 of the **raw body** with `CORE_WEBHOOK_SECRET`. Body includes `id` and `sentAt`, so reject if `sentAt` is older than ~10 min or `id` was seen |
 | `x-poof-source` | `onboarding.poof.ca` |
 
 Verify (Node):
@@ -26,13 +27,13 @@ const ok = crypto.timingSafeEqual(
   Buffer.from(req.headers['x-poof-signature'], 'hex'),
   crypto.createHmac('sha256', process.env.CORE_WEBHOOK_SECRET).update(rawBody).digest());
 ```
-Respond 2xx. Delivery is fire-and-forget (the retailer is never blocked on core); failures are logged on Vercel. Use the pull endpoint to reconcile.
+Respond 2xx. Two attempts, 5 s timeout each; after that the pull endpoint is the reconciliation path (poll it nightly).
 
 ### 2. Pull — export endpoint
 
 ```
 GET https://onboarding.poof.ca/api/core-export
-    x-admin-key: <ADMIN_KEY>
+    x-admin-key: <ADMIN_KEY>        (header only; the key is never accepted in the URL)
     ?since=2026-10-19T00:00:00Z     signups accepted after this time
     &stage=accepted,live            default accepted+live; add in_progress to see abandoned
     &licenseNumber=CRSA1537578      one store document
@@ -107,7 +108,7 @@ Field names and nesting are copied from `GET /v1/admin/store/:id` on production.
 
 ## Three tasks for the core team
 
-1. **Store data.** Load `data/agco-register.csv` (2,637 rows; **1,881 `Authorized to Open`**) into the stores table, status field exact. Acceptance test: HQ search "Sessions" → 50 locations, all Authorized. (Dev currently shows 8 / "Application in progress".)
+1. **Store data.** Load `data/agco-register.csv` (2,637 rows; **1,856 `Authorized to Open`**) into the stores table, status field exact. Acceptance test: HQ search "Sessions" → 50 locations, all Authorized. (Dev currently shows 8 / "Application in progress".)
 2. **Receive signups.** One endpoint that accepts the envelope above (or a nightly poll of `/api/core-export`). Upsert by licence.
 3. **Claim button.** On every unclaimed store page in the marketplace and HQ, link **"Claim this listing"** → `https://onboarding.poof.ca/s/<licenseNumber>`. Nothing else routes into onboarding.
 
@@ -118,4 +119,5 @@ Everything else on the onboarding epic (admin list, failed payments, POS sync, m
 |---|---|
 | `CORE_WEBHOOK_URL` | core endpoint for push (unset = push off, pull still works) |
 | `CORE_WEBHOOK_SECRET` | shared HMAC secret |
-| `ADMIN_KEY` | already set; also guards `/api/core-export` |
+| `ADMIN_KEY` | already set; also guards `/api/core-export` (header only) |
+| `SIGNING_SECRET` | signs resume links, order-form links and browser session tokens (set 2026-10-19) |

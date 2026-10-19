@@ -6,10 +6,14 @@
   "scripts": {
     "build:data": "node scripts/import-agco.js && node scripts/build-data.js && node scripts/export-links.js",
     "links": "node scripts/export-links.js",
-    "dev": "vercel dev"
+    "dev": "node scripts/dev-server.js",
+    "test": "node --test test/security.test.js"
   },
   "dependencies": {
     "pdf-lib": "^1.17.1",
     "stripe": "^17.0.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

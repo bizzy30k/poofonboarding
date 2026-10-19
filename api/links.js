@@ -1,11 +1,12 @@
-// GET /api/links?key=<ADMIN_KEY>            → CSV of every store with its personal link
-// GET /api/links?key=<ADMIN_KEY>&q=sessions → just the stores matching a name/city
+// GET /api/links            (header x-admin-key) → CSV of every store with its personal link
+// GET /api/links?q=sessions (header x-admin-key) → just the stores matching a name/city
 const config = require('../lib/config');
 const stores = require('../lib/stores');
+const sec = require('../lib/security');
 
 module.exports = async (req, res) => {
-  const { key, q } = req.query || {};
-  if (!config.ADMIN_KEY || key !== config.ADMIN_KEY) return res.status(401).send('Unauthorized');
+  if (!sec.requireAdmin(req, res)) return;
+  const { q } = req.query || {};
   const db = stores.load();
   const needle = (q || '').toLowerCase();
   const rows = [['chain', 'store_name', 'crsa', 'address', 'city', 'postal', 'chain_doors', 'link']];

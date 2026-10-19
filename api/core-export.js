@@ -1,5 +1,5 @@
 // GET /api/core-export   (admin only — Poof HQ core pulls signups in its own shape)
-// Headers: x-admin-key: <ADMIN_KEY>     (or ?key= for a quick browser check)
+// Headers: x-admin-key: <ADMIN_KEY>     (header only — never in the URL)
 // Query:
 //   licenseNumber=CRSA…   one store document for that licence (404 if no signup has it)
 //   customerId=cus_…      one signup envelope
@@ -14,11 +14,12 @@ const Stripe = require('stripe');
 const config = require('../lib/config');
 const record = require('../lib/record');
 const core = require('../lib/core');
+const sec = require('../lib/security');
 
 module.exports = async (req, res) => {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-  const key = req.headers['x-admin-key'] || (req.query && req.query.key);
-  if (!config.ADMIN_KEY || key !== config.ADMIN_KEY) return res.status(401).json({ error: 'Unauthorized' });
+  if (!sec.requireAdmin(req, res)) return;
+  if (!sec.rateLimit(`admin:${sec.clientIp(req)}`, 30, 60e3)) return sec.tooMany(res);
   if (!config.STRIPE_SECRET_KEY) return res.status(500).json({ error: 'Stripe is not configured.' });
   const stripe = new Stripe(config.STRIPE_SECRET_KEY);
   const q = req.query || {};
@@ -28,7 +29,7 @@ module.exports = async (req, res) => {
     const envelope = (rec, customer) => core.toCoreSignup(rec, {
       event: 'signup.export', customerId: customer.id, stage: stageOf(rec, customer),
       subscriptionId: customer.metadata?.subscription || null,
-      orderFormUrl: rec.acceptance?.at ? `${config.SITE_URL}/api/orderform?c=${customer.id}&t=${config.sign(customer.id)}` : null,
+      orderFormUrl: rec.acceptance?.at ? `${config.SITE_URL}/api/orderform?c=${customer.id}&t=${config.orderFormToken(customer.id)}` : null,
     });
 
     // Single customer
@@ -64,6 +65,6 @@ module.exports = async (req, res) => {
     return res.status(200).json({ count: out.length, signups: out });
   } catch (err) {
     console.error('core-export failed:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'Export failed.' });
   }
 };

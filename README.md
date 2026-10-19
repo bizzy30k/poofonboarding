@@ -37,9 +37,9 @@ cc'd to you, and an internal notification. On go-live day you run one
 | `api/resume.js` | Decodes a `/r/<token>` link back into state. |
 | `api/links.js` | **Admin.** CSV of every store's personal link. |
 | `lib/conflicts.js` | Franchise guard — finds doors already on another customer. |
-| `data/store-links.csv` | All 1,859 personal links, ready for outreach. |
+| `data/store-links.csv` | All 1,856 personal links, ready for outreach. |
 | `lib/` | Store index, metadata packing, PDF builder, mail. |
-| `data/stores.json` | 1,859 authorized stores in 636 chains. Built by `scripts/build-data.js`. |
+| `data/stores.json` | 1,856 authorized stores in 636 chains. Built by `scripts/build-data.js`. |
 | `scripts/dev-server.js` | `node scripts/dev-server.js` → http://localhost:3000 |
 
 See **DEPLOY.md** for the step-by-step.

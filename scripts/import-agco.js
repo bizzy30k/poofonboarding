@@ -16,11 +16,13 @@ let prev = {}; try { const p = JSON.parse(fs.readFileSync(D('agco.json'), 'utf8'
 const cities = JSON.parse(fs.readFileSync(D('city-coords.json'), 'utf8'));
 const titleCity = (s) => s.toLowerCase().replace(/(^|[\s\-'.])([a-z])/g, (m, p, c) => p + c.toUpperCase());
 const out = []; let fromPrev = 0, fromCity = 0, missing = 0;
+const seenLic = new Set(); let dupes = 0;
 for (const r of rows) {
   if (!r[iLic] || !/^authorized to open$/i.test((r[iStatus] || '').trim())) continue;
+  if (seenLic.has(r[iLic])) { dupes++; continue; } seenLic.add(r[iLic]); // AGCO register repeats some rows
   const id = r[iLic].trim(), city = titleCity(r[iCity].trim()), postal = (r[iPostal] || '').trim().replace(/^(\w{3})(\w{3})$/, '$1 $2');
   let ll = prev[id]; if (ll) fromPrev++; else { const c = cities[r[iCity].trim().toLowerCase()] || cities[r[iCity].trim().toLowerCase().replace(/\./g, '')]; if (c) { ll = c; fromCity++; } else { missing++; continue; } }
   out.push([id, r[iName].trim(), r[iAddr].trim(), city, postal, ll[0], ll[1], 0, (r[iWeb] || '').trim()]);
 }
 fs.writeFileSync(D('agco.json'), JSON.stringify({ b: [], s: out, source: 'AGCO register CSV', built: new Date().toISOString().slice(0, 10) }));
-console.log(`agco.json: ${out.length} authorized stores (${fromPrev} with prior coords, ${fromCity} city-centroid, ${missing} skipped — no coords)`);
+console.log(`agco.json: ${out.length} authorized stores (${dupes} duplicate register rows dropped) (${fromPrev} with prior coords, ${fromCity} city-centroid, ${missing} skipped — no coords)`);

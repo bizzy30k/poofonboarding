@@ -35,8 +35,9 @@ Set every one for **Production** (and Preview if you want test deploys).
 | `SITE_URL` | `https://onboarding.poof.ca` | Yes |
 | `SENDGRID_API_KEY` | app.sendgrid.com → Settings → API Keys → Create (Restricted: Mail Send = Full Access). poof.ca is already authenticated there, so no DNS. Set `FROM_EMAIL` to an address on the authenticated domain. | For retailer emails + PDF attachment |
 | `RESEND_API_KEY` | Alternative to SendGrid (resend.com → API Keys; needs the poof.ca domain verified there). Ignored when SendGrid is set. | Optional |
-| `WEB3FORMS_KEY` | `beb20837-c504-485a-8f38-48a731659bf7` (the key signup.poof.ca already uses) — sends the internal notification to onboarding@poof.ca | Recommended |
-| `MAPTILER_KEY` | `fdArbsM1NtC7P77ESC0c` (from join.poof.ca) — nicer map tiles. Without it the map falls back to free CARTO tiles. | Optional |
+| `SIGNING_SECRET` | **Required.** 64 random hex chars (`openssl rand -hex 32`). Signs resume links, order-form links and session tokens. Rotating it invalidates every link already sent — set it once, before launch, and never derive it from another key. |
+| `WEB3FORMS_KEY` | same key signup.poof.ca uses (copy from that project's Vercel env — not stored in git) — sends the internal notification to onboarding@poof.ca | Recommended |
+| `MAPTILER_KEY` | same key as join.poof.ca (copy from Vercel env; restrict it to onboarding.poof.ca in MapTiler) — nicer map tiles. Without it the map falls back to free CARTO tiles. | Optional |
 | `GOOGLE_PLACES_KEY` | Google Cloud → APIs → Places API → key. Adds rating, hours, phone to the store record. | Optional |
 | `KLAVIYO_API_KEY` | Klaviyo → Settings → API keys → private key with Events + Profiles write. Sends `Onboarding Started` / `Onboarding Completed` events so you can build an abandonment flow (see step 9). | Recommended |
 | `SMS_NUMBER` | Your cell in E.164, e.g. `+14165550100`. Shows a "Text Baz" button on the question screen. Leave blank to hide. | Optional |
@@ -106,8 +107,8 @@ Then search the site files for links that should point here and change them to `
 
 Every authorized store has its own link: `https://onboarding.poof.ca/s/<CRSA number>`. Open it and the flow starts with that store confirmed, then asks "There are N other [chain] locations — do you own any of them?" so franchisees pick only their doors.
 
-- `data/store-links.csv` in this repo has all 1,859 links (chain, store, CRSA, address, city, link). Paste into your outreach sheet / HubSpot / LinkedIn sequences.
-- Live download any time: `https://onboarding.poof.ca/api/links?key=YOUR_ADMIN_KEY` (add `&q=sessions` to filter).
+- `data/store-links.csv` in this repo has all 1,856 links (chain, store, CRSA, address, city, link). Paste into your outreach sheet / HubSpot / LinkedIn sequences.
+- Live download any time: `curl -H "x-admin-key: $ADMIN_KEY" https://onboarding.poof.ca/api/links -o links.csv` (add `?q=sessions` to filter). The key is header-only — never put it in a URL.
 - A chain-level link also works: `https://onboarding.poof.ca?store=sessions-cannabis`.
 
 ## 8. Go-live day: activate a retailer

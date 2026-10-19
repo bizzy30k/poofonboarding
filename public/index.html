@@ -235,6 +235,10 @@ footer a{color:var(--muted);text-decoration:none}footer a:hover{color:var(--ink)
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+// Always parse API responses defensively — a gateway timeout returns text, not JSON.
+const asJson = async (r) => { const t = await r.text(); try { return JSON.parse(t); } catch (e) { return { error: r.ok ? 'Unexpected response.' : `Server error (${r.status}). Please try again.` }; } };
+// Only http(s) links are ever rendered as hrefs.
+const safeUrl = (u) => (/^https?:\/\//i.test(String(u || '')) ? String(u) : '');
 const money = (n) => '$' + n.toLocaleString('en-CA', {minimumFractionDigits: 0});
 const plural = (n, a, b) => n === 1 ? a : b;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -254,7 +258,7 @@ const S = {
   selected: [], groups: [],
   systems: { pos: '', processor: '', ecommerce: '', delivery: null, deliverySoftware: '' },
   referral: null, owner: { name: '', email: '', mobile: '' },
-  acceptance: null, customerId: null, setupIntentId: null, orderFormUrl: null, cardSkipped: false, step: 0,
+  acceptance: null, customerId: null, session: null, setupIntentId: null, orderFormUrl: null, cardSkipped: false, step: 0,
 };
 function save(){ try{ localStorage.setItem('poof-onb', JSON.stringify({ S, at: Date.now() })); }catch(e){} }
 function clearSave(){ try{ localStorage.removeItem('poof-onb'); }catch(e){} }
@@ -262,7 +266,7 @@ function clearSave(){ try{ localStorage.removeItem('poof-onb'); }catch(e){} }
 /* ---------- analytics ---------- */
 function track(name, params){ try { if (window.gtag) gtag('event', name, { store: S.chain ? S.chain.name : '', locations: S.selected.length, entry: S.entryStoreId ? 'link' : 'search', ...(params || {}) }); } catch(e){} }
 function loadGA(id){ if (!id) return; const s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + id; document.head.appendChild(s); window.dataLayer = window.dataLayer || []; window.gtag = function(){ dataLayer.push(arguments); }; gtag('js', new Date()); gtag('config', id, { send_page_view: true }); }
-function lead(stage, extra){ if (!S.owner.email) return; fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: S.owner.email, name: S.owner.name, stage, storeName: storeName(), chain: S.chain && S.chain.slug, entryStoreId: S.entryStoreId, state: { extra: S.extraChains.map(c => c.slug), selected: S.selected, groups: S.groups, systems: S.systems, owner: S.owner, referral: S.referral }, ...(extra || {}) }) }).catch(() => {}); }
+function lead(stage, extra){ if (!S.owner.email) return; fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: S.owner.email, name: S.owner.name, stage, storeName: storeName(), chain: S.chain && S.chain.slug, entryStoreId: S.entryStoreId, customerId: S.customerId, session: S.session, state: { extra: S.extraChains.map(c => c.slug), selected: S.selected, groups: S.groups, systems: S.systems, owner: S.owner, referral: S.referral }, ...(extra || {}) }) }).catch(() => {}); }
 
 /* ---------- chat primitives ---------- */
 const log = $('log'), ctl = $('ctl');
@@ -294,7 +298,7 @@ function renderRecord(){
   const p = c.places || {}; const stores = allStores(); const sel = new Set(S.selected); const hasSel = S.selected.length > 0;
   let html = kv('Store', esc(storeName()), 'AGCO') + kv('AGCO status', 'Authorized to Open', 'AGCO')
     + kv('Phone', esc(S.overrides.phone || p.phone), S.overrides.phone ? 'YOU' : 'GOOGLE')
-    + (() => { const w = S.overrides.website || p.website || (storeById(S.entryStoreId) || c.stores[0]).website; return kv('Website', w ? `<a href="${esc(w)}" target="_blank" rel="noopener">${esc(w.replace(/^https?:\/\//, ''))}</a>` : '', S.overrides.website ? 'YOU' : p.website ? 'GOOGLE' : 'AGCO'); })()
+    + (() => { const w = S.overrides.website || p.website || (storeById(S.entryStoreId) || c.stores[0]).website; return kv('Website', safeUrl(w) ? `<a href="${esc(safeUrl(w))}" target="_blank" rel="noopener">${esc(w.replace(/^https?:\/\//, ''))}</a>` : '', S.overrides.website ? 'YOU' : p.website ? 'GOOGLE' : 'AGCO'); })()
     + kv('Google rating', p.rating ? `${p.rating} ★ · ${p.ratings || 0} reviews` : '', 'GOOGLE');
   html += `<div class="kv"><div class="k">Locations · ${hasSel ? S.selected.length + ' of ' : ''}${stores.length}</div><div class="locs">`
     + stores.map(s => `<div class="l${hasSel && !sel.has(s.id) ? ' off' : ''}"><b>${esc(s.city)}${s.id === S.entryStoreId ? ' · <span style="color:var(--pink-ink)">you</span>' : ''}</b><small>${esc(s.addr)}, ${esc(s.postal)} · ${esc(s.id)}</small></div>`).join('') + '</div></div>';
@@ -395,7 +399,7 @@ async function storeSearch(extra){
     function after(){ paintSel(); paintDd(); q.focus(); }
     async function run(){
       const v = q.value.trim(); if (v.length < 2) { dd.style.display = 'none'; lastQ = ''; return; }
-      const r = await fetch('/api/lookup?q=' + encodeURIComponent(v)).then(r => r.json()).catch(() => ({}));
+      const r = await fetch('/api/lookup?q=' + encodeURIComponent(v)).then(asJson).catch(() => ({}));
       R = { chains: r.chains || r.results || [], stores: r.stores || [], all: r.all || { count: 0, names: 0 } }; lastQ = v; cursor = -1; ticked.clear(); dd.style.display = 'block'; paintDd();
     }
     q.oninput = () => { clearTimeout(t); t = setTimeout(run, 160); };
@@ -406,7 +410,7 @@ async function storeSearch(extra){
       // Chains involved, in order of how many locations were chosen from each.
       const slugs = {}; chosen.forEach(st => { slugs[st.chain] = (slugs[st.chain] || 0) + 1; }); pending.forEach(c => { slugs[c.slug] = (slugs[c.slug] || 0) + c.ids.length; });
       const order = Object.keys(slugs).sort((a, b) => slugs[b] - slugs[a]);
-      const full = {}; await Promise.all(order.map(async (slug, i) => { full[slug] = await fetch(`/api/lookup?chain=${encodeURIComponent(slug)}${i === 0 && !extra ? '&places=1' : ''}`).then(r => r.json()); }));
+      const full = {}; await Promise.all(order.map(async (slug, i) => { full[slug] = await fetch(`/api/lookup?chain=${encodeURIComponent(slug)}${i === 0 && !extra ? '&places=1' : ''}`).then(asJson); }));
       const ids = new Set(chosen.keys()); pending.forEach(c => (full[c.slug] && full[c.slug].stores || []).forEach(st => ids.add(st.id)));
       const n = ids.size; me(n === 1 ? `${titleCase([...chosen.values()][0].name)}` : `${n} locations${order.length > 1 ? ` across ${order.length} groups` : ''}`);
       done({ chains: order.map(s => full[s]), ids: [...ids], already });
@@ -628,7 +632,7 @@ async function review(){
   await control((el, done) => {
     el.innerHTML = `<div class="lbl">Account owner</div><input class="in" id="oN" placeholder="Full name" autocomplete="name" value="${esc(S.owner.name)}"><div class="row2" style="margin-top:10px"><input class="in" id="oE" type="email" placeholder="Work email" autocomplete="email" value="${esc(S.owner.email)}"><input class="in" id="oM" type="tel" placeholder="Mobile (optional)" autocomplete="tel" value="${esc(S.owner.mobile)}"></div><div class="lbl" style="margin-top:14px">Referral code <span style="font-weight:500;text-transform:none;letter-spacing:0">(optional)</span></div><div class="row2 code"><input class="in" id="code" placeholder="e.g. BUZZD" style="text-transform:uppercase" value="${esc(S.referral ? S.referral.code : '')}"><button class="btn ghost" id="apply">Apply</button></div><div class="hint" id="codeHint">${S.referral ? '✓ ' + esc(S.referral.code) + ' — ' + esc(S.referral.description) : (CFG.offer ? 'No code? You still get ' + offerText() + ' by adding a card at the end.' : 'If a brand you stock gave you a code, it goes here.')}</div><div class="actions"><button class="btn" id="go">Review my setup</button></div>`;
     const show = errBox(el);
-    el.querySelector('#apply').onclick = async () => { const code = el.querySelector('#code').value.trim().toUpperCase(); const h = el.querySelector('#codeHint'); if (!code) { S.referral = null; h.textContent = ''; return; } h.textContent = 'Checking…'; const r = await fetch('/api/promo?code=' + encodeURIComponent(code)).then(r => r.json()).catch(() => ({ valid: false })); if (r.valid) { S.referral = { code: r.code, description: r.description }; h.innerHTML = `<span class="ok">✓</span> ${esc(r.code)} — ${esc(r.description)}, applied at go-live`; } else { S.referral = null; h.textContent = `"${code}" isn't an active code — mention it on the setup call instead.`; } };
+    el.querySelector('#apply').onclick = async () => { const code = el.querySelector('#code').value.trim().toUpperCase(); const h = el.querySelector('#codeHint'); if (!code) { S.referral = null; h.textContent = ''; return; } h.textContent = 'Checking…'; const r = await fetch('/api/promo?code=' + encodeURIComponent(code)).then(asJson).catch(() => ({ valid: false })); if (r.valid) { S.referral = { code: r.code, description: r.description }; h.innerHTML = `<span class="ok">✓</span> ${esc(r.code)} — ${esc(r.description)}, applied at go-live`; } else { S.referral = null; h.textContent = `"${code}" isn't an active code — mention it on the setup call instead.`; } };
     el.querySelector('#go').onclick = () => { const name = el.querySelector('#oN').value.trim(), email = el.querySelector('#oE').value.trim().toLowerCase(), mobile = el.querySelector('#oM').value.trim(); if (name.split(' ').length < 2) return show('Full name, please.'); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return show('That email doesn\'t look right.'); S.owner = { name, email, mobile }; me(`${name} · ${email}`); done(true); };
   });
   renderRecord(); save(); track('onb_review'); lead('review');
@@ -677,9 +681,9 @@ async function card(){
   if (!CFG.ready) { say('<b>Stripe isn\'t configured on this deployment yet.</b> Add the keys in Vercel and reload.', 'note'); return; }
   // Create the customer + SetupIntent now so both paths have a record to accept against
   const loading = say('One moment…', 'note'); let si;
-  try { si = await fetch('/api/setup-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store: { chain: S.chain.slug, chainName: storeName(), agcoName: S.chain.name, extra: S.extraChains.map(c => c.slug), overrides: S.overrides }, entryStoreId: S.entryStoreId, locations: S.selected, groups: S.groups, systems: S.systems, owner: S.owner, referral: S.referral, customerId: S.customerId }) }).then(r => r.json()); if (si.error) throw new Error(si.error); }
+  try { si = await fetch('/api/setup-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store: { chain: S.chain.slug, chainName: storeName(), agcoName: S.chain.name, extra: S.extraChains.map(c => c.slug), overrides: S.overrides }, entryStoreId: S.entryStoreId, locations: S.selected, groups: S.groups, systems: S.systems, owner: S.owner, referral: S.referral, customerId: S.customerId, session: S.session }) }).then(asJson); if (si.error) throw new Error(si.error); }
   catch (e) { loading.remove(); say(`Couldn't start the last step: ${esc(e.message)}. <a href="#" id="retry">Try again</a>`, 'note'); $('retry').onclick = (ev) => { ev.preventDefault(); card(); }; return; }
-  loading.remove(); S.customerId = si.customerId; S.setupIntentId = si.setupIntentId; save();
+  loading.remove(); S.customerId = si.customerId; S.session = si.session || S.session; S.setupIntentId = si.setupIntentId; save();
 
   say(`Last step — the card we'll keep on file for go-live. <b>Nothing is charged today.</b> You'll see your menu configured and approve it before the first invoice.`);
   const value = CFG.offer ? CFG.offer.months * monthly() : 0;
@@ -720,7 +724,7 @@ async function cardForm(si){
 
 async function finishAccept(){
   const rec = say('Recording your acceptance…', 'note'); let acc;
-  try { acc = await fetch('/api/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerId: S.customerId, setupIntentId: S.setupIntentId, acceptance: S.acceptance, cardSkipped: S.cardSkipped }) }).then(r => r.json()); if (acc.error) throw new Error(acc.error); }
+  try { acc = await fetch('/api/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerId: S.customerId, setupIntentId: S.setupIntentId, acceptance: S.acceptance, cardSkipped: S.cardSkipped, session: S.session }) }).then(asJson); if (acc.error) throw new Error(acc.error); }
   catch (e) { rec.innerHTML = `We couldn't finish the record: ${esc(e.message)}. <a href="#" id="retryAcc">Try again</a>`; $('retryAcc').onclick = (ev) => { ev.preventDefault(); rec.remove(); finishAccept(); }; return; }
   rec.remove(); S.orderFormUrl = acc.orderFormUrl; save();
   return success(acc);
@@ -773,7 +777,7 @@ async function showMap(){
   const stores = selectedStores();
   if (!map) { map = L.map('map', { scrollWheelZoom: false }); const keyed = CFG.mapKey ? `https://api.maptiler.com/maps/dataviz-light/{z}/{x}/{y}@2x.png?key=${CFG.mapKey}` : null; L.tileLayer(keyed || 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', keyed ? { tileSize: 512, zoomOffset: -1, maxZoom: 19, attribution: '© MapTiler © OpenStreetMap · stores: AGCO' } : { maxZoom: 19, attribution: '© OpenStreetMap © CARTO · stores: AGCO' }).addTo(map); }
   if (layer) layer.remove(); layer = L.layerGroup().addTo(map); const R = 5;
-  stores.forEach(s => { L.circle([s.lat, s.lng], { radius: R * 1000, color: '#ff3d8b', weight: 1.5, fillColor: '#ff3d8b', fillOpacity: .14 }).addTo(layer); L.circleMarker([s.lat, s.lng], { radius: 5, color: '#fff', weight: 2, fillColor: '#ff3d8b', fillOpacity: 1 }).addTo(layer).bindTooltip(`${s.name}<br><small>${s.addr}, ${s.city}</small>`); });
+  stores.forEach(s => { L.circle([s.lat, s.lng], { radius: R * 1000, color: '#ff3d8b', weight: 1.5, fillColor: '#ff3d8b', fillOpacity: .14 }).addTo(layer); L.circleMarker([s.lat, s.lng], { radius: 5, color: '#fff', weight: 2, fillColor: '#ff3d8b', fillOpacity: 1 }).addTo(layer).bindTooltip(`${esc(s.name)}<br><small>${esc(s.addr)}, ${esc(s.city)}</small>`); });
   if (stores.length) map.fitBounds(L.latLngBounds(stores.map(s => [s.lat, s.lng])).pad(0.25), { maxZoom: 11 });
   const cells = new Set(); stores.forEach(s => { const kmLat = 1 / 110.574, kmLng = 1 / (111.32 * Math.cos(s.lat * Math.PI / 180)); for (let dx = -R; dx <= R; dx += .5) for (let dy = -R; dy <= R; dy += .5) if (dx * dx + dy * dy <= R * R) cells.add(Math.round((s.lat + dy * kmLat) * 200) + ',' + Math.round((s.lng + dx * kmLng) * 200 * Math.cos(s.lat * Math.PI / 180))); });
   $('covKm').textContent = Math.round(cells.size * 0.25).toLocaleString('en-CA') + ' km²'; $('covSub').textContent = `Approximate coverage for ${stores.length} ${plural(stores.length, 'store', 'stores')}`;
@@ -793,7 +797,7 @@ function jump(to){
 
 /* ---------- boot ---------- */
 async function boot(){
-  try { CFG = { ...CFG, ...(await fetch('/api/config').then(r => r.json())) }; } catch (e) {}
+  try { CFG = { ...CFG, ...(await fetch('/api/config').then(asJson)) }; } catch (e) {}
   loadGA(CFG.ga4); if (CFG.calendly) $('navCall').href = CFG.calendly;
   if (!CFG.ready) $('notReady').style.display = 'block';
   const path = location.pathname; const qs = new URLSearchParams(location.search);
@@ -801,7 +805,7 @@ async function boot(){
   const mResume = path.match(/^\/r\/([A-Za-z0-9_\-\.]+)/);
 
   if (mResume) {
-    const r = await fetch('/api/resume?t=' + encodeURIComponent(mResume[1])).then(r => r.json()).catch(() => ({ error: 'bad' }));
+    const r = await fetch('/api/resume?t=' + encodeURIComponent(mResume[1])).then(asJson).catch(() => ({ error: 'bad' }));
     if (!r.error) {
       FAST = true; Object.assign(S, { chain: r.chain, extraChains: r.extra, entryStoreId: r.entryStoreId, selected: r.selected, groups: r.groups, systems: r.systems || S.systems, owner: r.owner || S.owner, referral: r.referral });
       renderRecord(); history.replaceState(null, '', '/'); track('onb_resume');
@@ -813,11 +817,11 @@ async function boot(){
   }
   if (mStore) {
     const id = mStore[1];
-    const r = await fetch(/^CRSA/i.test(id) ? `/api/lookup?store=${encodeURIComponent(id)}&places=1` : `/api/lookup?chain=${encodeURIComponent(id)}&places=1`).then(r => r.json()).catch(() => ({ error: 'bad' }));
+    const r = await fetch(/^CRSA/i.test(id) ? `/api/lookup?store=${encodeURIComponent(id)}&places=1` : `/api/lookup?chain=${encodeURIComponent(id)}&places=1`).then(asJson).catch(() => ({ error: 'bad' }));
     if (!r.error && r.entry) return landing(r);
     if (!r.error) { S.chain = r; renderRecord(); FAST = true; track('onb_view', { entry: 'chain-link' }); me(r.name); return confirmStore(); }
   }
-  let saved = null; try { saved = JSON.parse(localStorage.getItem('poof-onb') || 'null'); } catch (e) {}
+  let saved = null; try { saved = JSON.parse(localStorage.getItem('poof-onb') || 'null'); if (saved && saved.S && saved.S.customerId && !saved.S.session) { saved.S.customerId = null; saved.S.setupIntentId = null; } } catch (e) {}
   if (saved && saved.S && saved.S.chain && Date.now() - saved.at < 7 * 86400e3 && !saved.S.orderFormUrl) {
     say(`Welcome back. Pick up where you left off with <b>${esc(saved.S.chain.name)}</b>?`);
     const resume = await buttons([['Yes, continue', true], ['Start over', false, true]]);

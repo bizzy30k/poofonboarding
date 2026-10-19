@@ -17,14 +17,17 @@ const config = require('../lib/config');
 const record = require('../lib/record');
 const { findConflicts } = require('../lib/conflicts');
 const core = require('../lib/core');
+const sec = require('../lib/security');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (!config.ADMIN_KEY || req.headers['x-admin-key'] !== config.ADMIN_KEY) return res.status(401).json({ error: 'Unauthorized' });
+  if (!sec.requireAdmin(req, res)) return;
+  if (!sec.rateLimit(`admin:${sec.clientIp(req)}`, 30, 60e3)) return sec.tooMany(res);
   const stripe = new Stripe(config.STRIPE_SECRET_KEY);
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const body = sec.body(req) || {};
     const { customerId, referralCode, locations, force } = body;
+    if (!/^cus_[A-Za-z0-9]+$/.test(customerId || '')) return res.status(400).json({ error: 'customerId required.' });
     const customer = await stripe.customers.retrieve(customerId);
     const rec = record.unpack(customer.metadata || {});
     if (!rec || !rec.acceptance?.at) return res.status(400).json({ error: 'No accepted agreement on this customer.' });
@@ -35,8 +38,10 @@ module.exports = async (req, res) => {
     const qty = rec.locations.filter(l => ids.includes(l.id)).length;
     if (!qty) return res.status(400).json({ error: 'No matching locations.' });
 
-    // Franchise guard: refuse doors already live elsewhere unless forced
-    const conflicts = (await findConflicts(stripe, rec.store.chainName, ids, customerId)).filter(c => /live/i.test(c.stage));
+    // Franchise guard: refuse doors already live elsewhere unless forced. Fails CLOSED if the check itself fails.
+    const guard = await findConflicts(stripe, ids, customerId);
+    if (!guard.ok && !force) return res.status(503).json({ error: 'Could not verify other accounts for these doors (Stripe search failed). Retry, or pass force:true.' });
+    const conflicts = guard.conflicts.filter(c => /live/i.test(c.stage));
     if (conflicts.length && !force) return res.status(409).json({ error: 'Some doors are already live on another account. Pass force:true to activate anyway.', conflicts });
 
     let promo = null, promoSource = null;
@@ -78,6 +83,7 @@ module.exports = async (req, res) => {
     return res.status(200).json({ ok: true, coreSync, subscription: sub.id, status: sub.status, quantity: qty, monthly: qty * config.PRICE_CAD, promo: promo ? promo.code : null, promoSource, conflictsOverridden: conflicts });
   } catch (e) {
     console.error('activate failed:', e);
-    return res.status(500).json({ error: e.message });
+    console.error('activate failed:', { err: e.message });
+    return res.status(500).json({ error: 'Activation failed. Check the server log.' });
   }
 };
