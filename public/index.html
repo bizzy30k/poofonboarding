@@ -732,11 +732,36 @@ async function success(acc){
   track('onb_complete', { card: S.cardSkipped ? 'skipped' : 'saved', offer: acc.offer ? 'yes' : 'no' }); lead('completed');
   await typing(250);
   say('<h2 style="margin:4px 0 0;font-size:24px">You\'re in.</h2>', 'wide');
+  confetti();
   say(`Welcome to Poof, ${esc(S.owner.name.split(' ')[0])}. ${acc.mail && acc.mail.retailer ? 'Your order form is in your inbox.' : 'Your order form is ready below.'}${acc.offer ? ` <b>${acc.offer.months} months free</b> is locked in for go-live.` : ''}`);
   say(`<div class="steps"><div class="ok"><i></i><p style="margin:0"><b>Signed up</b><span>Agreement accepted${S.cardSkipped ? '' : ', card on file'}, order form issued.</span></p></div><div class="now"><i></i><p style="margin:0"><b>Our team reaches out</b><span>Within one business day, to walk you through it${S.cardSkipped ? ' and take your card details' : ''}.</span></p></div><div><i></i><p style="margin:0"><b>We connect your systems</b><span>We contact ${esc(partnerList())}, with you copied.</span></p></div><div><i></i><p style="margin:0"><b>Your admin panel</b><span>Login sent, menu configured, ready for your approval.</span></p></div><div><i></i><p style="margin:0"><b>Go live</b><span>You approve, we launch, and the first invoice starts.</span></p></div></div>`, 'wide');
   ctl.innerHTML = `<div class="actions"><a class="btn" href="${esc(S.orderFormUrl)}" target="_blank" rel="noopener">Download your order form</a><button class="btn ghost" id="mapBtn">Preview my coverage</button><a class="btn ghost" href="https://business.poof.ca">Open business.poof.ca</a></div>`;
   $('mapBtn').onclick = showMap;
   clearSave();
+}
+
+/* ---------- confetti (fires once on "You're in.") ---------- */
+function confetti(){
+  if (reduce) return;
+  const c = document.createElement('canvas'); c.setAttribute('aria-hidden', 'true');
+  c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+  document.body.appendChild(c);
+  const ctx = c.getContext('2d'), dpr = Math.min(devicePixelRatio || 1, 2);
+  const W = c.width = innerWidth * dpr, H = c.height = innerHeight * dpr;
+  const COLORS = ['#FF428A', '#B77EFC', '#489CFC', '#FFD166', '#FFFFFF'];
+  const P = [];
+  const burst = (x, y, n, ang, spread, speed) => { for (let i = 0; i < n; i++) { const a = ang + (Math.random() - .5) * spread, v = speed * (.6 + Math.random() * .8); P.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: .14 * dpr, w: (5 + Math.random() * 6) * dpr, h: (3 + Math.random() * 4) * dpr, r: Math.random() * Math.PI, vr: (Math.random() - .5) * .25, col: COLORS[i % COLORS.length], life: 1, decay: .006 + Math.random() * .006, round: Math.random() < .3 }); } };
+  const s = 14 * dpr;
+  burst(0, H * .55, 110, -Math.PI / 4, .9, s);               // left cannon
+  burst(W, H * .55, 110, -3 * Math.PI / 4, .9, s);           // right cannon
+  setTimeout(() => burst(W / 2, H * .35, 90, -Math.PI / 2, 2.2, s * .7), 180); // centre pop
+  let last = performance.now();
+  (function frame(t){
+    const dt = Math.min((t - last) / 16.7, 2); last = t;
+    ctx.clearRect(0, 0, W, H);
+    for (let i = P.length - 1; i >= 0; i--) { const p = P[i]; p.vy += p.g * dt; p.vx *= .985; p.vy *= .985; p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.vr * dt; p.life -= p.decay * dt; if (p.life <= 0 || p.y > H + 20) { P.splice(i, 1); continue; } ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 1.4)); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.scale(1, Math.abs(Math.cos(p.r * 2)) * .7 + .3); ctx.fillStyle = p.col; if (p.round) { ctx.beginPath(); ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2); ctx.fill(); } else ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore(); }
+    if (P.length) requestAnimationFrame(frame); else c.remove();
+  })(last);
 }
 
 /* ---------- coverage map (Leaflet loaded on demand) ---------- */
