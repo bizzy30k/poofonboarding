@@ -228,3 +228,34 @@ test('PDF: non-WinAnsi characters do not crash the order form', async () => {
   const pdf = await buildOrderForm(rec);
   assert.ok(Buffer.isBuffer(pdf) || pdf instanceof Uint8Array); assert.ok(pdf.length > 1000);
 });
+
+test('Turnstile: enforced on first customer creation and lead(started) when configured; updates with session exempt', async () => {
+  const cfg = require('../lib/config');
+  // Not configured → passes (dev/preview)
+  assert.equal((await call(setupIntent, { body: goodBody(), headers: { ip: '6.0.0.1' } })).code, 200);
+  // Configure and stub the verifier's network call
+  cfg.TURNSTILE_SECRET_KEY = 'secret';
+  const origFetchT = sec.fetchT;
+  const results = { 'good-token': { success: true }, 'bad-token': { success: false, 'error-codes': ['invalid-input-response'] } };
+  const secMod = require('../lib/security');
+  const realVerify = secMod.verifyTurnstile;
+  // Monkeypatch global fetch used by fetchT
+  const realFetch = global.fetch;
+  global.fetch = async (url, opts) => { const b = JSON.parse(opts.body); return { json: async () => results[b.response] || { success: false, 'error-codes': ['missing-input-response'] } }; };
+  try {
+    assert.equal((await call(setupIntent, { body: goodBody(), headers: { ip: '6.0.0.2' } })).code, 403, 'no token → refused');
+    assert.equal((await call(setupIntent, { body: { ...goodBody(), turnstile: 'bad-token' }, headers: { ip: '6.0.0.3' } })).code, 403, 'bad token → refused');
+    const ok = await call(setupIntent, { body: { ...goodBody(), turnstile: 'good-token' }, headers: { ip: '6.0.0.4' } });
+    assert.equal(ok.code, 200, JSON.stringify(ok.body));
+    // Session-authenticated update needs no new token
+    const upd = await call(setupIntent, { body: { ...goodBody(), customerId: ok.body.customerId, session: ok.body.session }, headers: { ip: '6.0.0.5' } });
+    assert.equal(upd.code, 200);
+    // lead(started) refused without token, other stages unaffected
+    assert.equal((await call(lead, { body: { email: 'ts@example.com', stage: 'started', chain: 'sessions-cannabis' }, headers: { ip: '5.5.5.5' } })).code, 403);
+    assert.equal((await call(lead, { body: { email: 'ts@example.com', stage: 'started', chain: 'sessions-cannabis', turnstile: 'good-token' }, headers: { ip: '5.5.5.6' } })).code, 200);
+    assert.equal((await call(lead, { body: { email: 'ts@example.com', stage: 'locations', chain: 'sessions-cannabis' }, headers: { ip: '5.5.5.7' } })).code, 200);
+    // Verifier outage → degrades open (does not lock retailers out)
+    global.fetch = async () => { throw new Error('ECONNRESET'); };
+    assert.equal((await call(setupIntent, { body: { ...goodBody(), turnstile: 'whatever' }, headers: { ip: '6.0.0.6' } })).code, 200);
+  } finally { global.fetch = realFetch; cfg.TURNSTILE_SECRET_KEY = undefined; }
+});

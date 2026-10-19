@@ -34,6 +34,7 @@ function validate(b) {
     referral: b.referral ? { code: v.str(b.referral.code, 32) } : null,
     customerId: b.customerId ? String(b.customerId) : null,
     session: b.session ? String(b.session) : null,
+    turnstile: typeof b.turnstile === 'string' ? b.turnstile : null,
   };
   const bad = [];
   const walk = (x, p) => { for (const k in x) { const val = x[k]; if (val === undefined) bad.push(p + k); else if (val && typeof val === 'object' && !Array.isArray(val)) walk(val, p + k + '.'); else if (Array.isArray(val)) val.forEach((e, i) => { if (e === undefined) bad.push(`${p}${k}[${i}]`); else if (e && typeof e === 'object') walk(e, `${p}${k}[${i}].`); }); } };
@@ -78,6 +79,8 @@ module.exports = async (req, res) => {
         metadata: record.pack(rec, record.chunksIn(prev.metadata)),
       });
     } else {
+      const ts = await sec.verifyTurnstile(b.turnstile, ip);
+      if (!ts.ok) return res.status(403).json({ error: 'Verification failed. Please reload the page and try again.' });
       customer = await stripe.customers.create({
         name: b.store.chainName,
         email: b.owner.email,

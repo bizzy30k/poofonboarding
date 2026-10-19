@@ -48,6 +48,7 @@ module.exports = async (req, res) => {
     // so nobody can fire a fake "completed" to pull a real lead out of the retargeting flow.
     if (!sec.rateLimit(`lead:ip:${ip}`, 8, 60e3) || !sec.rateLimit(`lead:em:${email}`, 12, 3600e3)) return sec.tooMany(res);
     if (stage === 'completed' && !sec.checkSession(b.customerId, b.session)) return res.status(403).json({ error: 'Session expired.' });
+    if (stage === 'started') { const ts = await sec.verifyTurnstile(b.turnstile, ip); if (!ts.ok) return res.status(403).json({ error: 'Verification failed. Please reload and try again.' }); }
 
     const chain = sec.v.slug(b.chain) ? stores.chain(b.chain) : null;
     const storeName = sec.v.optStr(b.storeName, 120) || (chain ? chain.name : '');

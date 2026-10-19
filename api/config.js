@@ -15,6 +15,7 @@ module.exports = async (req, res) => {
     brands: config.BRANDS,
     retailerCount: config.RETAILER_COUNT,
     ga4: config.GA4_ID,
+    turnstileSiteKey: config.TURNSTILE_SITE_KEY || '',
     mapKey: process.env.MAPTILER_KEY || '',
     placesEnabled: !!config.GOOGLE_PLACES_KEY,
     ready: !!(config.STRIPE_SECRET_KEY && process.env.STRIPE_PUBLISHABLE_KEY),

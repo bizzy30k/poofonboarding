@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://js.stripe.com/v3/"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <style>
 :root{
   /* sampled from business.poof.ca */
@@ -239,12 +240,42 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const asJson = async (r) => { const t = await r.text(); try { return JSON.parse(t); } catch (e) { return { error: r.ok ? 'Unexpected response.' : `Server error (${r.status}). Please try again.` }; } };
 // Only http(s) links are ever rendered as hrefs.
 const safeUrl = (u) => (/^https?:\/\//i.test(String(u || '')) ? String(u) : '');
+// Cloudflare Turnstile: invisible bot check on the email step. Resolves with a token
+// (or null when Turnstile isn't configured / fails to load — the server decides what that means).
+let tsWidget = null, tsAt = 0;
+function turnstileToken(container){
+  return new Promise((resolve) => {
+    if (!CFG.turnstileSiteKey) return resolve(null);
+    let settled = false; const finish = (t) => { if (!settled) { settled = true; if (t) { S.turnstile = t; tsAt = Date.now(); } resolve(t); } };
+    const tryRender = (n) => {
+      if (!window.turnstile) { if (n > 40) return finish(null); return setTimeout(() => tryRender(n + 1), 100); }
+      try { tsWidget = window.turnstile.render(container, { sitekey: CFG.turnstileSiteKey, size: 'flexible', appearance: 'interaction-only', callback: (t) => finish(t), 'error-callback': () => finish(null), 'expired-callback': () => { S.turnstile = null; } }); }
+      catch (e) { finish(null); }
+    };
+    tryRender(0);
+    setTimeout(() => finish(null), 12000);
+  });
+}
+// Tokens are single-use and expire after ~5 min. Before a call that consumes one, get a fresh one.
+function freshTurnstile(){
+  return new Promise((resolve) => {
+    if (!CFG.turnstileSiteKey || !window.turnstile || tsWidget == null) return resolve(S.turnstile);
+    if (S.turnstile && Date.now() - tsAt < 90e3) return resolve(S.turnstile);
+    let settled = false; const finish = (t) => { if (!settled) { settled = true; if (t) { S.turnstile = t; tsAt = Date.now(); } resolve(S.turnstile); } };
+    try {
+      const host = document.getElementById('ts') || (() => { const d = document.createElement('div'); d.id = 'ts'; d.style.cssText = 'position:fixed;left:-9999px'; document.body.appendChild(d); return d; })();
+      window.turnstile.remove(tsWidget);
+      tsWidget = window.turnstile.render(host, { sitekey: CFG.turnstileSiteKey, size: 'flexible', appearance: 'interaction-only', callback: (t) => finish(t), 'error-callback': () => finish(null) });
+    } catch (e) { finish(null); }
+    setTimeout(() => finish(null), 8000);
+  });
+}
 const money = (n) => '$' + n.toLocaleString('en-CA', {minimumFractionDigits: 0});
 const plural = (n, a, b) => n === 1 ? a : b;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const titleCase = (s) => String(s).toLowerCase().replace(/(^|[\s\-(])([a-z])/g, (m, p, c) => p + c.toUpperCase());
 
-let CFG = { priceCad: 50, termsUrl: 'https://business.poof.ca/terms', termsVersion: '2026-08-15', stripePublishableKey: '', mapKey: '', ready: false, offer: null, calendly: '', sms: '', testimonial: null, brands: [], retailerCount: '', ga4: '' };
+let CFG = { turnstileSiteKey: '', priceCad: 50, termsUrl: 'https://business.poof.ca/terms', termsVersion: '2026-08-15', stripePublishableKey: '', mapKey: '', ready: false, offer: null, calendly: '', sms: '', testimonial: null, brands: [], retailerCount: '', ga4: '' };
 const STEPS = ['Store', 'Locations', 'Systems', 'Review', 'Agreement'];
 const POS = ['Cova', 'Greenline', 'Blaze', 'Dutchie POS', 'Tendy', 'Other'];
 const PROC = ['Merrco', 'Moneris', 'Clover', 'Other'];
@@ -258,7 +289,7 @@ const S = {
   selected: [], groups: [],
   systems: { pos: '', processor: '', ecommerce: '', delivery: null, deliverySoftware: '' },
   referral: null, owner: { name: '', email: '', mobile: '' },
-  acceptance: null, customerId: null, session: null, setupIntentId: null, orderFormUrl: null, cardSkipped: false, step: 0,
+  acceptance: null, customerId: null, session: null, turnstile: null, setupIntentId: null, orderFormUrl: null, cardSkipped: false, step: 0,
 };
 function save(){ try{ localStorage.setItem('poof-onb', JSON.stringify({ S, at: Date.now() })); }catch(e){} }
 function clearSave(){ try{ localStorage.removeItem('poof-onb'); }catch(e){} }
@@ -266,7 +297,7 @@ function clearSave(){ try{ localStorage.removeItem('poof-onb'); }catch(e){} }
 /* ---------- analytics ---------- */
 function track(name, params){ try { if (window.gtag) gtag('event', name, { store: S.chain ? S.chain.name : '', locations: S.selected.length, entry: S.entryStoreId ? 'link' : 'search', ...(params || {}) }); } catch(e){} }
 function loadGA(id){ if (!id) return; const s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + id; document.head.appendChild(s); window.dataLayer = window.dataLayer || []; window.gtag = function(){ dataLayer.push(arguments); }; gtag('js', new Date()); gtag('config', id, { send_page_view: true }); }
-function lead(stage, extra){ if (!S.owner.email) return; fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: S.owner.email, name: S.owner.name, stage, storeName: storeName(), chain: S.chain && S.chain.slug, entryStoreId: S.entryStoreId, customerId: S.customerId, session: S.session, state: { extra: S.extraChains.map(c => c.slug), selected: S.selected, groups: S.groups, systems: S.systems, owner: S.owner, referral: S.referral }, ...(extra || {}) }) }).catch(() => {}); }
+function lead(stage, extra){ if (!S.owner.email) return; fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: S.owner.email, name: S.owner.name, stage, storeName: storeName(), chain: S.chain && S.chain.slug, entryStoreId: S.entryStoreId, customerId: S.customerId, session: S.session, turnstile: S.turnstile, state: { extra: S.extraChains.map(c => c.slug), selected: S.selected, groups: S.groups, systems: S.systems, owner: S.owner, referral: S.referral }, ...(extra || {}) }) }).catch(() => {}); }
 
 /* ---------- chat primitives ---------- */
 const log = $('log'), ctl = $('ctl');
@@ -480,13 +511,16 @@ async function captureEmail(){
   await typing(300);
   say('Where should we send your order form? We\'ll also save your progress so you can finish on any device.');
   await control((el, done) => {
-    el.innerHTML = `<div class="row2 em"><input class="in" id="eN" maxlength="120" placeholder="Your name" autocomplete="name" value="${esc(S.owner.name)}"><input class="in" id="eE" maxlength="254" type="email" placeholder="Work email" autocomplete="email" value="${esc(S.owner.email)}"></div><div class="actions"><button class="btn" id="go">Continue</button></div><div class="hint">No newsletter, no spam. Just your paperwork and your login.</div>`;
+    el.innerHTML = `<div id="ts" style="margin:0 0 8px"></div><div class="row2 em"><input class="in" id="eN" maxlength="120" placeholder="Your name" autocomplete="name" value="${esc(S.owner.name)}"><input class="in" id="eE" maxlength="254" type="email" placeholder="Work email" autocomplete="email" value="${esc(S.owner.email)}"></div><div class="actions"><button class="btn" id="go">Continue</button></div><div class="hint">No newsletter, no spam. Just your paperwork and your login.</div>`;
     const show = errBox(el);
     el.querySelector('#go').onclick = () => { const name = el.querySelector('#eN').value.trim(), email = el.querySelector('#eE').value.trim().toLowerCase(); if (!name) return show('Your name, please.'); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return show('That email doesn\'t look right.'); S.owner.name = name; S.owner.email = email; me(`${name} · ${email}`); done(true); };
+    turnstileToken(el.querySelector('#ts')).then(t => { S.turnstile = t; });
     [el.querySelector('#eN'), el.querySelector('#eE')].forEach(i => i.onkeydown = (e) => { if (e.key === 'Enter') el.querySelector('#go').click(); });
     setTimeout(() => el.querySelector(S.owner.name ? '#eE' : '#eN').focus(), 50);
   });
-  renderRecord(); save(); track('onb_email'); lead('started');
+  renderRecord(); save(); track('onb_email');
+  for (let i = 0; i < 30 && CFG.turnstileSiteKey && !S.turnstile; i++) await sleep(100); // give the invisible check up to 3s
+  lead('started');
   return pricing();
 }
 
@@ -681,7 +715,8 @@ async function card(){
   if (!CFG.ready) { say('<b>Stripe isn\'t configured on this deployment yet.</b> Add the keys in Vercel and reload.', 'note'); return; }
   // Create the customer + SetupIntent now so both paths have a record to accept against
   const loading = say('One moment…', 'note'); let si;
-  try { si = await fetch('/api/setup-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store: { chain: S.chain.slug, chainName: storeName(), agcoName: S.chain.name, extra: S.extraChains.map(c => c.slug), overrides: S.overrides }, entryStoreId: S.entryStoreId, locations: S.selected, groups: S.groups, systems: S.systems, owner: S.owner, referral: S.referral, customerId: S.customerId, session: S.session }) }).then(asJson); if (si.error) throw new Error(si.error); }
+  await freshTurnstile();
+  try { si = await fetch('/api/setup-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store: { chain: S.chain.slug, chainName: storeName(), agcoName: S.chain.name, extra: S.extraChains.map(c => c.slug), overrides: S.overrides }, entryStoreId: S.entryStoreId, locations: S.selected, groups: S.groups, systems: S.systems, owner: S.owner, referral: S.referral, customerId: S.customerId, session: S.session, turnstile: S.turnstile }) }).then(asJson); if (si.error) throw new Error(si.error); }
   catch (e) { loading.remove(); say(`Couldn't start the last step: ${esc(e.message)}. <a href="#" id="retry">Try again</a>`, 'note'); $('retry').onclick = (ev) => { ev.preventDefault(); card(); }; return; }
   loading.remove(); S.customerId = si.customerId; S.session = si.session || S.session; S.setupIntentId = si.setupIntentId; save();
 

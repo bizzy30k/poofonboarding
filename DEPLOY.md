@@ -36,6 +36,7 @@ Set every one for **Production** (and Preview if you want test deploys).
 | `SENDGRID_API_KEY` | app.sendgrid.com → Settings → API Keys → Create (Restricted: Mail Send = Full Access). poof.ca is already authenticated there, so no DNS. Set `FROM_EMAIL` to an address on the authenticated domain. | For retailer emails + PDF attachment |
 | `RESEND_API_KEY` | Alternative to SendGrid (resend.com → API Keys; needs the poof.ca domain verified there). Ignored when SendGrid is set. | Optional |
 | `SIGNING_SECRET` | **Required.** 64 random hex chars (`openssl rand -hex 32`). Signs resume links, order-form links and session tokens. Rotating it invalidates every link already sent — set it once, before launch, and never derive it from another key. |
+| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile widget (hostnames: onboarding.poof.ca + poofonboarding.vercel.app, mode Managed). Blocks scripted signups; invisible to real retailers. Without the secret the check is skipped. |
 | `WEB3FORMS_KEY` | same key signup.poof.ca uses (copy from that project's Vercel env — not stored in git) — sends the internal notification to onboarding@poof.ca | Recommended |
 | `MAPTILER_KEY` | same key as join.poof.ca (copy from Vercel env; restrict it to onboarding.poof.ca in MapTiler) — nicer map tiles. Without it the map falls back to free CARTO tiles. | Optional |
 | `GOOGLE_PLACES_KEY` | Google Cloud → APIs → Places API → key. Adds rating, hours, phone to the store record. | Optional |
