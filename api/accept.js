@@ -10,6 +10,7 @@ const record = require('../lib/record');
 const { buildOrderForm } = require('../lib/orderform');
 const { sendSignupEmails } = require('../lib/mail');
 const { findConflicts } = require('../lib/conflicts');
+const core = require('../lib/core');
 
 let termsHashCache = null;
 async function termsHash() {
@@ -81,6 +82,10 @@ module.exports = async (req, res) => {
     const orderFormUrl = `${config.SITE_URL}/api/orderform?c=${customerId}&t=${token}`;
     let mail = {};
     try { const pdf = await buildOrderForm(rec); mail = await sendSignupEmails(rec, pdf, orderFormUrl); } catch (e) { mail = { error: e.message }; }
+
+    // 5. Tell Poof HQ core (system of record). Never blocks the retailer.
+    const coreSync = await core.notifyCore(rec, { event: 'signup.accepted', customerId, orderFormUrl, stage: 'accepted' });
+    if (coreSync.error || coreSync.ok === false) console.warn('core sync (accept):', coreSync);
 
     return res.status(200).json({ ok: true, orderFormUrl, acceptedAt: rec.acceptance.at, offer: rec.offer, mail: { retailer: !!(mail.retailer && mail.retailer.id) } });
   } catch (err) {

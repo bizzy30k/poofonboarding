@@ -16,6 +16,7 @@ const Stripe = require('stripe');
 const config = require('../lib/config');
 const record = require('../lib/record');
 const { findConflicts } = require('../lib/conflicts');
+const core = require('../lib/core');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -70,7 +71,11 @@ module.exports = async (req, res) => {
     rec.activation = { at: new Date().toISOString(), subscription: sub.id, quantity: qty, locationIds: ids, promo: promo ? promo.code : null, promoSource };
     await stripe.customers.update(customerId, { metadata: { ...record.pack(rec, record.chunksIn(customer.metadata)), onboarding_stage: 'Live', subscription: sub.id } });
 
-    return res.status(200).json({ ok: true, subscription: sub.id, status: sub.status, quantity: qty, monthly: qty * config.PRICE_CAD, promo: promo ? promo.code : null, promoSource, conflictsOverridden: conflicts });
+    // Tell Poof HQ core the doors are live (core flips isActive on its side)
+    const coreSync = await core.notifyCore({ ...rec, locations: rec.locations.filter(l => ids.includes(l.id)) }, { event: 'signup.activated', customerId, subscriptionId: sub.id, stage: 'live' });
+    if (coreSync.error || coreSync.ok === false) console.warn('core sync (activate):', coreSync);
+
+    return res.status(200).json({ ok: true, coreSync, subscription: sub.id, status: sub.status, quantity: qty, monthly: qty * config.PRICE_CAD, promo: promo ? promo.code : null, promoSource, conflictsOverridden: conflicts });
   } catch (e) {
     console.error('activate failed:', e);
     return res.status(500).json({ error: e.message });
