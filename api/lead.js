@@ -10,23 +10,9 @@ const config = require('../lib/config');
 const sec = require('../lib/security');
 const stores = require('../lib/stores');
 const { internalEmail } = require('../lib/mail');
+const { track: klaviyo } = require('../lib/klaviyo');
 
 const STAGES = ['started', 'locations', 'systems', 'review', 'agreement', 'completed', 'waitlist'];
-
-async function klaviyo(event, email, props) {
-  if (!config.KLAVIYO_API_KEY) return { skipped: true };
-  const r = await sec.fetchT('https://a.klaviyo.com/api/events', {
-    method: 'POST',
-    headers: { Authorization: `Klaviyo-API-Key ${config.KLAVIYO_API_KEY}`, 'Content-Type': 'application/vnd.api+json', accept: 'application/vnd.api+json', revision: '2025-01-15' },
-    body: JSON.stringify({ data: { type: 'event', attributes: {
-      metric: { data: { type: 'metric', attributes: { name: event } } },
-      profile: { data: { type: 'profile', attributes: { email, first_name: props.first_name || undefined, properties: { retailer: true, store: props.store } } } },
-      properties: props,
-    } } }),
-  });
-  return { ok: r.ok, status: r.status };
-}
-
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
