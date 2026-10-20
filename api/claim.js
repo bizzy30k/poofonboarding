@@ -1,7 +1,7 @@
 // POST /api/claim — "Claim your listing": the step before signup.
 //
-// The owner lands on /claim/<CRSA>, confirms the store, gives a name + email, and fills ONE
-// form: logo, phone, public email, website, Instagram, description, hours. Nothing else.
+// The owner lands on /claim/<CRSA>, confirms the store, and fills ONE form. Required: name, email,
+// logo, phone, website, description, hours. Optional: public email, Instagram. Nothing else.
 // On submit we:
 //   1. store the logo (public URL) and the record (private) in Vercel Blob   — lib/claims.js
 //   2. email the owner the fixed "Awesome. This has been updated." copy      — lib/mail.js
@@ -10,8 +10,9 @@
 // Nothing goes live by itself: you review it, put it in HQ, then publish via POST /api/claims.
 //
 // Body: { id, name, email, turnstile?, listing: { logo?, phone?, email?, website?, instagram?, description?, hours? } }
-//   logo:   data URL (image/png|jpeg|webp, ≤600 KB — the page resizes to ≤512px first)
-//   hours:  { monday: { open:'10:00', close:'22:00' } | null, … sunday } | null
+//   logo:   data URL (image/png|jpeg|webp, ≤600 KB — the page resizes to ≤512px first). May be omitted
+//           on a re-submit when a logo is already on file.
+//   hours:  { monday: { open:'10:00 AM', close:'10:00 PM' } | null, … sunday } — at least one open day
 // Reply: { ok, id, logoUrl, revision }
 const sec = require('../lib/security');
 const stores = require('../lib/stores');
@@ -53,6 +54,9 @@ module.exports = async (req, res) => {
   };
   const bad = Object.keys(fields).filter(k => fields[k] === undefined);
   if (bad.length) return res.status(400).json({ error: `Please check: ${bad.join(', ')}.`, fields: bad });
+  // Bare minimum for a claimed listing: phone, website, description, hours (logo checked below, once we know if one is on file)
+  const missing = ['phone', 'website', 'description'].filter(k => !fields[k]);
+  if (missing.length) return res.status(400).json({ error: `Required: ${missing.join(', ')}.`, fields: missing });
 
   // Strict brakes count accepted submissions only, so a typo doesn't lock a real owner out.
   if (!sec.rateLimit(`claim:ip:${ip}`, 5, 3600e3) || !sec.rateLimit(`claim:store:${id}`, 3, 3600e3)) return sec.tooMany(res);
@@ -60,6 +64,7 @@ module.exports = async (req, res) => {
   try {
     const prev = await claims.getRecord(id).catch(() => null);
     let logoUrl = prev && prev.listing ? prev.listing.logoUrl || null : null;
+    if (!fields.logo && !logoUrl) return res.status(400).json({ error: 'Upload your logo.', fields: ['logo'] });
     if (fields.logo) logoUrl = await claims.putLogo(id, fields.logo);
 
     const rec = {

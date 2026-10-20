@@ -12,17 +12,20 @@ API in this repo (`api/claim.js`, `api/claims.js`, `lib/claims.js`). Both are te
 
 ## The one form
 
+Bare minimum for a claimed listing — **required**: name, email, logo, phone, website,
+description, hours. Optional: public store email, Instagram.
+
 | Field | Required | Prefilled from | Validation (server, `lib/claims.js`) |
 |---|---|---|---|
 | Your name | yes | — | 1–120 chars |
 | Your email | yes | — | email; becomes the Klaviyo profile |
-| Logo | no | — | PNG/JPEG/WebP data URL ≤ 600 KB, magic bytes checked. Page resizes to ≤ 512 px PNG first |
-| Store phone | no | Places `phone` | 10 digits after stripping; stored as digits |
+| Logo | yes | — | PNG/JPEG/WebP data URL ≤ 600 KB, magic bytes checked. Page resizes to ≤ 512 px PNG first. May be omitted on a re-submit when one is already on file |
+| Store phone | yes | Places `phone` | 10 digits after stripping; stored as digits |
 | Store email (public) | no | — | email |
-| Website | no | Places `website` | http(s) URL; scheme added if missing |
+| Website | yes | Places `website` | http(s) URL; scheme added if missing |
 | Instagram | no | — | handle only, `[A-Za-z0-9._]{1,30}`; URL or `@` accepted and stripped |
-| Description | no | — | ≤ 300 chars |
-| Hours | no | Places `weekday_text` | shape below |
+| Description | yes | — | 1–300 chars |
+| Hours | yes | Places `weekday_text` (else 10 am – 10 pm every day) | shape below; at least one open day |
 
 Places comes from the existing `GET /api/lookup?store=<CRSA>&places=1` — nothing new to build.
 The page parses `weekday_text` lines (`"Monday: 10:00 AM – 10:00 PM"`, `Closed`, `Open 24 hours`,
@@ -30,22 +33,24 @@ split days collapse to outer bounds) in `src/utils/hours.ts`.
 
 ## Hours shape — **please confirm for core**
 
-No store in `core-stores.json` has `operationHours` populated, so this is a proposal. 24-hour
-`HH:MM`, `null` = closed, whole object `null` = owner chose not to show hours.
+No store in `core-stores.json` has `operationHours` populated, so this is a proposal. 12-hour
+clock, `"h:mm AM|PM"`, `null` = closed that day. Always present; at least one day open.
 
 ```json
 "operationHours": {
-  "monday":    { "open": "10:00", "close": "22:00" },
-  "tuesday":   { "open": "10:00", "close": "22:00" },
-  "wednesday": { "open": "10:00", "close": "22:00" },
-  "thursday":  { "open": "10:00", "close": "22:00" },
-  "friday":    { "open": "10:00", "close": "23:00" },
-  "saturday":  { "open": "10:00", "close": "23:00" },
+  "monday":    { "open": "10:00 AM", "close": "10:00 PM" },
+  "tuesday":   { "open": "10:00 AM", "close": "10:00 PM" },
+  "wednesday": { "open": "10:00 AM", "close": "10:00 PM" },
+  "thursday":  { "open": "10:00 AM", "close": "10:00 PM" },
+  "friday":    { "open": "10:00 AM", "close": "11:00 PM" },
+  "saturday":  { "open": "10:00 AM", "close": "11:00 PM" },
   "sunday":    null
 }
 ```
 
-Past-midnight closes are expressed as `close < open` (`"11:00"` → `"01:00"`).
+Past-midnight closes are expressed as a close earlier than the open (`"11:00 AM"` → `"1:00 AM"`).
+The page edits hours as 24-hour `HH:MM` internally (native time inputs) and converts at the wire
+(`src/utils/hours.ts → toWire / fromWire`). The API accepts `am`/`p.m.` spellings and normalises.
 
 ## API
 
@@ -64,12 +69,13 @@ Past-midnight closes are expressed as `close < open` (`"11:00"` → `"01:00"`).
     "website": "thewestore.ca",
     "instagram": "@thewestore",
     "description": "…",
-    "hours": { "monday": { "open": "10:00", "close": "22:00" }, "…": "…", "sunday": null }
+    "hours": { "monday": { "open": "10:00 AM", "close": "10:00 PM" }, "…": "…", "sunday": null }
   }
 }
 ```
 
-Reply `{ ok, id, logoUrl, revision }`. Errors `{ error, fields: [...] }` with 400/403/404/429.
+Reply `{ ok, id, logoUrl, revision }`. Errors `{ error, fields: [...] }` with 400/403/404/429 —
+`fields` names what's malformed or missing (`Required: website, description.`).
 A second submit for the same store keeps the previous logo if none is sent and bumps `revision`.
 
 What it does, in order:
