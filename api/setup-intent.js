@@ -87,7 +87,10 @@ module.exports = async (req, res) => {
         phone: b.owner.mobile || undefined,
         description: `Poof retailer — ${b.store.chainName} (${locs.length})`,
         metadata: record.pack(rec),
+        // Billing address is replaced by the card's billing details at /api/accept; until then (or if the
+        // card is skipped) the first store's address stands in. The store itself is the shipping address.
         address: { line1: locs[0].addr, city: locs[0].city, state: 'ON', postal_code: locs[0].postal, country: 'CA' },
+        shipping: { name: b.store.chainName, address: { line1: locs[0].addr, city: locs[0].city, state: 'ON', postal_code: locs[0].postal, country: 'CA' } },
       });
     }
 

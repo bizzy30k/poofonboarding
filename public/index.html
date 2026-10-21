@@ -743,13 +743,16 @@ async function card(){
 async function cardForm(si){
   const stripe = Stripe(CFG.stripePublishableKey);
   const elements = stripe.elements({ clientSecret: si.clientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#ff3d8b', colorText: '#08080a', borderRadius: '12px', fontFamily: 'Outfit, system-ui, sans-serif', fontSizeBase: '15px' }, rules: { '.Input': { borderColor: '#e8e8ee', boxShadow: 'none', padding: '13px 14px' }, '.Input:focus': { borderColor: '#ff3d8b', boxShadow: '0 0 0 4px rgba(255,61,139,.12)' } } }, fonts: [{ cssSrc: 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap' }] });
-  const pe = elements.create('payment', { layout: 'tabs', wallets: { link: 'never', applePay: 'never', googlePay: 'never' }, fields: { billingDetails: { name: 'never', email: 'never', address: { country: 'never', postalCode: 'auto' } } }, terms: { card: 'never' } });
+  // Billing address is collected by Stripe's Address Element (validated, mandatory) — not the store's AGCO address.
+  const ae = elements.create('address', { mode: 'billing', allowedCountries: ['CA', 'US'], defaultValues: { name: S.owner.name }, fields: { phone: 'never' } });
+  const pe = elements.create('payment', { layout: 'tabs', wallets: { link: 'never', applePay: 'never', googlePay: 'never' }, fields: { billingDetails: { name: 'never', email: 'never', address: 'never' } }, terms: { card: 'never' } });
   const v = await control((el, done) => {
-    el.innerHTML = `<div class="lbl">Card on file</div><div id="pe"></div><div class="actions"><button class="btn" id="go">Save card securely${CFG.offer ? ' · ' + offerText() : ''}</button><button class="btn link" id="back">Skip instead</button></div><div class="hint" style="margin-top:8px">Handled by <b>Stripe</b>. Poof never sees or stores your card number.</div>`;
-    const show = errBox(el); pe.mount('#pe');
+    el.innerHTML = `<div class="lbl">Billing address</div><div id="ae"></div><div class="hint" style="margin:6px 0 14px">Where the card's statements go — not necessarily the store.</div><div class="lbl">Card on file</div><div id="pe"></div><div class="actions"><button class="btn" id="go">Save card securely${CFG.offer ? ' · ' + offerText() : ''}</button><button class="btn link" id="back">Skip instead</button></div><div class="hint" style="margin-top:8px">Handled by <b>Stripe</b>. Poof never sees or stores your card number.</div>`;
+    const show = errBox(el); ae.mount('#ae'); pe.mount('#pe');
     el.querySelector('#back').onclick = () => { me('Skip instead'); done('skip'); };
     el.querySelector('#go').onclick = async () => { const go = el.querySelector('#go'); go.disabled = true; go.textContent = 'Saving…'; show('');
-      const r = await stripe.confirmSetup({ elements, redirect: 'if_required', confirmParams: { payment_method_data: { billing_details: { name: S.owner.name, email: S.owner.email, address: { country: 'CA' } } } } });
+      const addr = await ae.getValue(); if (!addr.complete) { go.disabled = false; go.textContent = 'Save card securely'; return show('Please complete the billing address.'); }
+      const r = await stripe.confirmSetup({ elements, redirect: 'if_required', confirmParams: { payment_method_data: { billing_details: { email: S.owner.email } } } });
       if (r.error) { go.disabled = false; go.textContent = 'Save card securely'; return show(r.error.message); }
       me('Card saved'); done('saved'); };
   });

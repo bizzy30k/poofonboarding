@@ -20,6 +20,7 @@ const stripeMock = {
     update: async (id, o) => { const c = db.customers.get(id); Object.assign(c, o, { metadata: { ...c.metadata, ...(o.metadata || {}) } }); return c; },
     search: () => ({ async *[Symbol.asyncIterator]() { for (const c of db.customers.values()) yield c; }, data: [...db.customers.values()], has_more: false }),
   },
+  paymentMethods: { retrieve: async () => ({ id: 'pm_x', billing_details: { name: 'Mo Khan', email: 'mo@store.ca', address: { line1: '12 Billing St', city: 'Windsor', state: 'ON', postal_code: 'N9A 1A1', country: 'CA' } } }) },
   setupIntents: {
     create: async (o) => { const id = `seti_${nextId++}`; const si = { id, customer: o.customer, status: 'succeeded', payment_method: 'pm_x', client_secret: 'cs' }; db.setupIntents.set(id, si); return si; },
     retrieve: async (id) => db.setupIntents.get(id),
