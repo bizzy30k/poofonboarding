@@ -30,7 +30,17 @@ module.exports = async (req, res) => {
     // so nobody can fire a fake "completed" to pull a real lead out of the retargeting flow.
     if (!sec.rateLimit(`lead:ip:${ip}`, 8, 60e3) || !sec.rateLimit(`lead:em:${email}`, 12, 3600e3)) return sec.tooMany(res);
     if (stage === 'completed' && !sec.checkSession(b.customerId, b.session)) return res.status(403).json({ error: 'Session expired.' });
-    if (stage === 'started') { const ts = await sec.verifyTurnstile(b.turnstile, ip); if (!ts.ok) return res.status(403).json({ error: 'Verification failed. Please reload and try again.' }); }
+    if (stage === 'started') {
+      // Arriving from a claim: the owner's edit token proves they are the claimant (and that email) — no Turnstile needed.
+      let viaClaim = false;
+      if (b.claimToken && b.entryStoreId) {
+        const claims = require('../lib/claims');
+        const rec = await claims.getRecord(String(b.entryStoreId).toUpperCase().replace(/[^A-Z0-9]/g, '')).catch(() => null);
+        viaClaim = !!(rec && claims.checkEditToken(rec, b.claimToken) && rec.contact.email.toLowerCase() === email.toLowerCase());
+      }
+      if (!viaClaim) { const ts = await sec.verifyTurnstile(b.turnstile, ip); if (!ts.ok) return res.status(403).json({ error: 'Verification failed. Please reload and try again.' }); }
+      b.fromClaim = viaClaim;
+    }
 
     const chain = sec.v.slug(b.chain) ? stores.chain(b.chain) : null;
     const storeName = sec.v.optStr(b.storeName, 120) || (chain ? chain.name : '');
