@@ -97,7 +97,7 @@ A second submit for the same store keeps the previous logo if none is sent and b
 What it does, in order:
 
 1. Logo → Vercel Blob, **public**, stable URL `…/claims/<CRSA>/logo.<ext>` (this is `imageUrl`)
-2. Record → Vercel Blob, **private**, `claims/<CRSA>/claim.json` (has the owner's email, so never public)
+2. Record → Vercel Blob, `claims/<CRSA>/claim.enc`, **encrypted** (AES-256-GCM keyed from `SIGNING_SECRET`) — the store is public but the owner's contact details are unreadable by URL
 3. Retailer email (fixed copy, SendGrid/Resend via `lib/mail.js` → `claimReceivedHtml`)
 4. Internal email to `ONBOARDING_INBOX`: every field, logo link + preview, and the core-shaped
    JSON block ready to paste into the HQ store record

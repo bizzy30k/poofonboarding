@@ -75,7 +75,9 @@ test('claim: stores logo publicly, record privately, returns core-shaped fields 
   assert.equal(r.body.revision, 1);
   assert.match(r.body.logoUrl, /\/claims\/CRSA\d+\/logo\.png$/);
   assert.equal(store.get(`claims/${ANY.id}/logo.png`).opts.access, 'public');
-  assert.equal(store.get(`claims/${ANY.id}/claim.json`).opts.access, 'private');
+  const enc = store.get(`claims/${ANY.id}/claim.enc`);
+  assert.equal(enc.opts.access, 'public');
+  assert.ok(!enc.body.toString('utf8').includes('mo@store.ca'), 'record must not be readable in the blob');
 
   const a = res();
   await admin({ method: 'GET', headers: { 'x-admin-key': process.env.ADMIN_KEY }, query: { id: ANY.id } }, a);
