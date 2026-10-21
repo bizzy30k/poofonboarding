@@ -150,6 +150,13 @@ test('claim-bulk: claims the siblings with the source listing, skips taken/forei
   assert.ok(!r.body.siblings.find(x => sib.includes(x.id)));
 });
 
+test('places: opening time without a meridiem', () => {
+  const h = placesLib.hoursFromWeekdayText(['Monday: 9:00 – 5:00 PM', 'Tuesday: 1:00 – 5:00 PM', 'Wednesday: 11:00 – 11:00 PM']);
+  assert.deepEqual(h.monday, { open: '9:00 AM', close: '5:00 PM' });
+  assert.deepEqual(h.tuesday, { open: '1:00 PM', close: '5:00 PM' });
+  assert.deepEqual(h.wednesday, { open: '11:00 AM', close: '11:00 PM' });
+});
+
 test('admin: release unlocks a store so it can be claimed again', async () => {
   const id = CHAIN.stores[1].id;
   let a = res(); await admin({ method: 'POST', headers: { 'x-admin-key': process.env.ADMIN_KEY }, body: { action: 'release', id }, query: {} }, a);
@@ -192,6 +199,20 @@ test('admin: requires header key, lists, publishes once', async () => {
   assert.equal(a.body.publishedAt, first);
   a = res(); await admin({ method: 'GET', headers: { 'x-admin-key': process.env.ADMIN_KEY }, query: { id: ANY.id } }, a);
   assert.equal(a.body.core.poof.stage, 'live');
+});
+
+test('claim-link: same reply whether or not the email matches; edit of a published record goes back to pending', async () => {
+  const link = require(path.join('..', 'api', 'claim-link'));
+  let r = res(); await link(post({ id: ANY.id, email: 'mo@store.ca' }), r); assert.equal(r.code, 200); assert.deepEqual(r.body, { ok: true });
+  r = res(); await link(post({ id: ANY.id, email: 'stranger@x.co' }), r); assert.equal(r.code, 200); assert.deepEqual(r.body, { ok: true });
+  r = res(); await link(post({ id: ANY.id, email: 'nope' }), r); assert.equal(r.code, 400);
+  // ANY was published in the admin test above; an owner edit must come back as pending with the live URL kept
+  r = res(); await claim(post({ id: ANY.id, name: 'Mo Khan', email: 'mo@store.ca', t: TOKEN, listing: FULL({ logo: '', description: 'Edited after publish.' }) }, { 'x-forwarded-for': '198.51.100.8' }), r);
+  assert.equal(r.code, 200, JSON.stringify(r.body));
+  const a = res(); await admin({ method: 'GET', headers: { 'x-admin-key': process.env.ADMIN_KEY }, query: { id: ANY.id } }, a);
+  assert.equal(a.body.claim.status, 'pending'); assert.equal(a.body.claim.editedSincePublish, true); assert.ok(a.body.claim.liveUrl);
+  assert.equal(a.body.core.poof.claimedAt, a.body.claim.claimedAt);
+  assert.equal(a.body.claim.editor, undefined, 'same email, different case → not an editor');
 });
 
 test('claim: honeypot and cross-origin are rejected quietly', async () => {

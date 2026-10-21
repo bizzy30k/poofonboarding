@@ -99,7 +99,7 @@ module.exports = async (req, res) => {
       return res.status(409).json({ error: 'already_claimed', claimedAt: prev.claimedAt || prev.submittedAt, storeName: prev.storeName });
     }
     // Strict brakes count accepted submissions only, so a typo (or a stranger hitting a locked store) doesn't lock a real owner out.
-    if (!sec.rateLimit(`claim:ip:${ip}`, 5, 3600e3) || !sec.rateLimit(`claim:store:${id}`, 3, 3600e3)) return sec.tooMany(res);
+    if (!sec.rateLimit(`claim:ip:${ip}`, 5, 3600e3) || !sec.rateLimit(`claim:store:${id}`, 6, 3600e3)) return sec.tooMany(res);
     let logoUrl = prev && prev.listing ? prev.listing.logoUrl || null : null;
     if (!fields.logo && !logoUrl) return res.status(400).json({ error: 'Upload your logo.', fields: ['logo'] });
     if (fields.logo) logoUrl = await claims.putLogo(id, fields.logo);
@@ -110,25 +110,28 @@ module.exports = async (req, res) => {
       storeName: store.chainName || store.name,
       chain: store.chain,
       location: { name: store.name, addr: store.addr, city: store.city, postal: store.postal },
-      status: prev && prev.status === 'published' ? 'published' : 'pending',
+      status: 'pending', // an edit always goes back through review; publishedAt/liveUrl are kept so /admin can show "edited since publish"
+      editedSincePublish: !!(prev && prev.status === 'published'),
       revision: prev ? (prev.revision || 1) + 1 : 1,
       claimedAt: prev ? prev.claimedAt || prev.submittedAt : now,
       submittedAt: now,
       publishedAt: prev && prev.publishedAt ? prev.publishedAt : null,
       liveUrl: prev && prev.liveUrl ? prev.liveUrl : null,
       contact: prev ? prev.contact : { name, email }, // the lock holder stays the contact; an edit can't hand the listing to a new email
-      editor: prev && (prev.contact.email !== email || prev.contact.name !== name) ? { name, email } : undefined,
+      editor: prev && prev.contact.email.toLowerCase() !== email.toLowerCase() ? { name, email } : undefined,
       listing: { logoUrl, phone: fields.phone, email: fields.email, website: fields.website, instagram: fields.instagram, description: fields.description, hours: fields.hours },
       ip,
       source: 'onboarding.poof.ca/claim',
     };
-    await claims.putRecord(rec);
+    const [, siblings, google] = await Promise.all([
+      claims.putRecord(rec),
+      claims.unclaimedSiblings(store, stores.chain(store.chain)),
+      places(store).catch(() => null), // usually cached from the page's prefill call; only feeds the ownership verdict
+    ]);
 
     const token = claims.editToken(id, rec.contact.email);
-    const siblings = await claims.unclaimedSiblings(store, stores.chain(store.chain));
     const core = claims.toCoreListing(rec);
     const out = { ok: true, id, logoUrl, revision: rec.revision, token, chainName: rec.storeName, siblings };
-    const google = await places(store).catch(() => null); // usually cached from the page's prefill call
     const mail = await sendClaimEmails(rec, core, { token, siblings: siblings.length, google });
     if (mail.retailer && mail.retailer.error) console.error('claim: retailer mail failed', mail.retailer.error);
     if (mail.internal && mail.internal.error) console.error('claim: internal mail failed', mail.internal.error);
