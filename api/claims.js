@@ -29,9 +29,13 @@ module.exports = async (req, res) => {
       if (id) {
         const rec = await claims.getRecord(id);
         if (!rec) return res.status(404).json({ error: 'No claim for that store.' });
-        return res.status(200).json({ claim: rec, core: claims.toCoreListing(rec) });
+        const store = require('../lib/stores').store(id);
+        const google = store ? await require('../lib/places').places(store).catch(() => null) : null;
+        return res.status(200).json({ claim: rec, core: claims.toCoreListing(rec), google, ownership: claims.ownership(rec, google) });
       }
-      return res.status(200).json({ claims: await claims.listRecords() });
+      // The approval page: every record plus the core-shaped fields and a cheap ownership read (no Google call).
+      const list = await claims.listRecords();
+      return res.status(200).json({ claims: list.map(r => ({ ...r, core: claims.toCoreListing(r), ownership: claims.ownership(r, null) })) });
     }
 
     if (req.method === 'POST') {
