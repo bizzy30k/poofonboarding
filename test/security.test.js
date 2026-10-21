@@ -19,6 +19,8 @@ const stripeMock = {
     retrieve: async (id) => { const c = db.customers.get(id); if (!c) throw new Error('No such customer'); return c; },
     update: async (id, o) => { const c = db.customers.get(id); Object.assign(c, o, { metadata: { ...c.metadata, ...(o.metadata || {}) } }); return c; },
     search: () => ({ async *[Symbol.asyncIterator]() { for (const c of db.customers.values()) yield c; }, data: [...db.customers.values()], has_more: false }),
+    // Email lookup is opt-in per test (db.listByEmail) so the shared goodBody() email doesn't trip the dedupe elsewhere.
+    list: async ({ email }) => ({ data: db.listByEmail ? [...db.customers.values()].filter(c => c.email === email) : [] }),
   },
   paymentMethods: { retrieve: async () => ({ id: 'pm_x', billing_details: { name: 'Mo Khan', email: 'mo@store.ca', address: { line1: '12 Billing St', city: 'Windsor', state: 'ON', postal_code: 'N9A 1A1', country: 'CA' } } }) },
   setupIntents: {
@@ -259,4 +261,19 @@ test('Turnstile: enforced on first customer creation and lead(started) when conf
     global.fetch = async () => { throw new Error('ECONNRESET'); };
     assert.equal((await call(setupIntent, { body: { ...goodBody(), turnstile: 'whatever' }, headers: { ip: '6.0.0.6' } })).code, 200);
   } finally { global.fetch = realFetch; cfg.TURNSTILE_SECRET_KEY = undefined; }
+});
+
+test('setup-intent: one Stripe customer per email — unfinished signup is reused, finished one blocks a second', async () => {
+  db.listByEmail = true;
+  try {
+    const body = () => ({ ...goodBody(), owner: { ...goodBody().owner, email: 'one@percustomer.ca' } });
+    const a = await call(setupIntent, { body: body() });
+    const b = await call(setupIntent, { body: body() });
+    assert.equal(a.code, 200); assert.equal(b.code, 200);
+    assert.equal(a.body.customerId, b.body.customerId, 'restarted signup reuses the customer');
+    const ok = await call(accept, { body: { customerId: b.body.customerId, setupIntentId: b.body.setupIntentId, session: b.body.session, acceptance: { name: 'Test Owner', title: 'Owner', agreed: true, authorised: true } } });
+    assert.equal(ok.code, 200, JSON.stringify(ok.body));
+    const c = await call(setupIntent, { body: body() });
+    assert.equal(c.code, 409); assert.equal(c.body.code, 'email_exists'); assert.match(c.body.error, /already has a Poof signup/);
+  } finally { db.listByEmail = false; }
 });

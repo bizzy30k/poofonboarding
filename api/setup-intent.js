@@ -81,7 +81,24 @@ module.exports = async (req, res) => {
     } else {
       const ts = await sec.verifyTurnstile(b.turnstile, ip);
       if (!ts.ok) return res.status(403).json({ error: 'Verification failed. Please reload the page and try again.' });
-      customer = await stripe.customers.create({
+      // One Stripe customer per email. A finished signup under this email blocks a second one; an unfinished
+      // one (they restarted) is reused so the Customers list never fills with duplicates.
+      const existing = (await stripe.customers.list({ email: b.owner.email, limit: 5 }).catch(() => ({ data: [] }))).data.filter(c => !c.deleted);
+      const finished = existing.find(c => { const r = record.unpack(c.metadata || {}); return r && r.acceptance && r.acceptance.at; });
+      if (finished) {
+        const r = record.unpack(finished.metadata || {});
+        return res.status(409).json({ error: `${b.owner.email} already has a Poof signup${r && r.store && r.store.chainName ? ` for ${r.store.chainName}` : ''}. To add locations or change anything, reply to your order-form email or write to contact@poof.ca.`, code: 'email_exists' });
+      }
+      const reuse = existing[0];
+      if (reuse) {
+        customer = await stripe.customers.update(reuse.id, {
+          name: b.store.chainName, email: b.owner.email, phone: b.owner.mobile || undefined,
+          description: `Poof retailer — ${b.store.chainName} (${locs.length})`,
+          metadata: record.pack(rec, record.chunksIn(reuse.metadata)),
+          address: { line1: locs[0].addr, city: locs[0].city, state: 'ON', postal_code: locs[0].postal, country: 'CA' },
+          shipping: { name: b.store.chainName, address: { line1: locs[0].addr, city: locs[0].city, state: 'ON', postal_code: locs[0].postal, country: 'CA' } },
+        });
+      } else customer = await stripe.customers.create({
         name: b.store.chainName,
         email: b.owner.email,
         phone: b.owner.mobile || undefined,
