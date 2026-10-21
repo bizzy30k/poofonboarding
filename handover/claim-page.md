@@ -180,9 +180,12 @@ Google lists. Nothing is live until `publish`.
 
 **1 — on Finalise** · subject `Your <store> listing on Poof has been updated`
 
-> Awesome. This has been updated. You should see it live in 1 business day on the marketplace.
-> We'll send you an email to have a look. In the meantime, if you are interested in connecting
-> your point-of-sale system, follow this link: **[Connect your point-of-sale system]** → `/s/<CRSA>`
+> We received your update — live within one business day. Our team is reviewing your submission
+> now. If everything looks correct, you'll receive an email confirming the approval and the update
+> on the marketplace. In the meantime, if you are interested in connecting your point-of-sale
+> system, follow this link: **[Connect your point-of-sale system]** → `/s/<CRSA>?t=<token>`
+>
+> Every link carries `utm_source=sendgrid&utm_medium=email&utm_campaign=…&utm_content=…`.
 
 Email 1 also carries **Edit your listing** (the signed `?t=` link) and, when the licence has other
 unclaimed stores, **Claim your other N locations** (`?t=…&more=1`).

@@ -53,7 +53,7 @@ module.exports = async (req, res) => {
         rec.liveUrl = url;
         await claims.putRecord(rec);
         const mail = await sendClaimLiveEmail(rec, url).catch(e => ({ error: e.message }));
-        const k = await klaviyo.track('Listing Published', rec.contact.email, { store: rec.storeName, entry_store: id, chain: rec.chain, first_name: rec.contact.name.split(' ')[0] || '', live_url: url, pos_url: `${config.SITE_URL}/s/${id}` }).catch(e => ({ error: e.message }));
+        const k = await klaviyo.track('Listing Published', rec.contact.email, { store: rec.storeName, entry_store: id, chain: rec.chain, first_name: rec.contact.name.split(' ')[0] || '', live_url: url, pos_url: `${config.SITE_URL}/s/${id}?utm_source=klaviyo&utm_medium=email&utm_campaign=published-not-connected` }, { listing_published_at: rec.publishedAt, listing_live: true }).catch(e => ({ error: e.message }));
         return res.status(200).json({ ok: true, id, status: rec.status, publishedAt: rec.publishedAt, liveUrl: url, mail, klaviyo: k });
       }
       if (b.action === 'resend') {

@@ -58,7 +58,10 @@ module.exports = async (req, res) => {
     const first = name.split(' ')[0] || '';
     const props = { stage, store: storeName, chain: chain ? chain.slug : '', entry_store: entryStoreId, locations: (st && Array.isArray(st.selected) ? st.selected.length : 0), resume_url: resumeUrl, first_name: first };
     const out = {};
-    out.klaviyo = await klaviyo(stage === 'completed' ? 'Onboarding Completed' : stage === 'waitlist' ? 'Onboarding Waitlist' : 'Onboarding Started', email, props).catch(e => ({ error: e.message }));
+    const profileProps = stage === 'completed' ? { pos_connected: true, pos_completed_at: new Date().toISOString() }
+      : stage === 'waitlist' ? { waitlisted: true }
+      : { pos_started: true, pos_stage: stage, ...(b.fromClaim ? { pos_from_claim: true } : {}) };
+    out.klaviyo = await klaviyo(stage === 'completed' ? 'Onboarding Completed' : stage === 'waitlist' ? 'Onboarding Waitlist' : 'Onboarding Started', email, props, profileProps).catch(e => ({ error: e.message }));
 
     // Internal ping on first capture and waitlist only (not every step — that's noise)
     if (stage === 'started' || stage === 'waitlist') {

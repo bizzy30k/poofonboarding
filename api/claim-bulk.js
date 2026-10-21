@@ -83,8 +83,8 @@ module.exports = async (req, res) => {
         store: src.storeName, entry_store: from, chain: src.chain, first_name: src.contact.name.split(' ')[0] || '',
         logo: !!src.listing.logoUrl, hours: true, description: !!src.listing.description, revision: 1,
         locations: recs.length, bulk: true, location_ids: claimed.join(','),
-        pos_url: `${config.SITE_URL}/s/${from}?also=${claimed.join(',')}`,
-      }).catch(e => ({ error: e.message }));
+        pos_url: `${config.SITE_URL}/s/${from}?also=${claimed.join(',')}&t=${String(b.t)}&utm_source=klaviyo&utm_medium=email&utm_campaign=claimed-not-connected`,
+      }, { store_count: recs.length + 1, chain: src.chain }).catch(e => ({ error: e.message }));
       if (k && k.error) console.error('claim-bulk: klaviyo failed', k.error);
     }
     return res.status(200).json({ ok: true, claimed, skipped, token: String(b.t) });

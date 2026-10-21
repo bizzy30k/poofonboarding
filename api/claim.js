@@ -139,7 +139,10 @@ module.exports = async (req, res) => {
       store: rec.storeName, entry_store: id, chain: rec.chain, first_name: rec.contact.name.split(' ')[0] || '',
       logo: !!logoUrl, hours: !!fields.hours, description: !!fields.description, revision: rec.revision,
       locations: 1, unclaimed_siblings: siblings.length,
-      pos_url: `${config.SITE_URL}/s/${id}`, edit_url: `${config.SITE_URL}/claim/${id}?t=${token}`,
+      pos_url: `${config.SITE_URL}/s/${id}?t=${token}&utm_source=klaviyo&utm_medium=email&utm_campaign=claimed-not-connected`,
+      edit_url: `${config.SITE_URL}/claim/${id}?t=${token}`,
+    }, {
+      claimed_at: rec.claimedAt, chain: rec.chain, store_count: 1, last_claim_store: id, claim_source: 'onboarding.poof.ca',
     }).catch(e => ({ error: e.message }));
     if (k && k.error) console.error('claim: klaviyo failed', k.error);
     return res.status(200).json(out);
