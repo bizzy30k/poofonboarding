@@ -48,6 +48,13 @@ test('Stripe metadata: one hq_<CRSA> key per matched location + a summary, cappe
   assert.deepStrictEqual(hq.stripeMeta(map, 1), { hq_CRSA1: 'https://hq.poof.ca/store/a', hq_store_ids: 'CRSA1=a CRSA3=c' });
 });
 
+test('no key → no auth header; CORE_API_DISABLED switches the lookup off', async () => {
+  delete process.env.CORE_API_KEY; mock(() => ({ body: [] })); await hq.search('zzz');
+  assert.deepStrictEqual(Object.keys(calls[0].headers), ['accept']);
+  process.env.CORE_API_DISABLED = '1'; hq._reset(); assert.strictEqual(await hq.match(agco), null); assert.strictEqual(calls.length, 1);
+  delete process.env.CORE_API_DISABLED; process.env.CORE_API_KEY = 'test-key';
+});
+
 test('auth schemes: x-api-key and custom header', async () => {
   process.env.CORE_API_AUTH = 'x-api-key'; mock(() => ({ body: [] })); await hq.search('zzz');
   assert.strictEqual(calls[0].headers['x-api-key'], 'test-key');
