@@ -7,7 +7,7 @@
     "build:data": "node scripts/import-agco.js && node scripts/build-data.js && node scripts/export-links.js",
     "links": "node scripts/export-links.js",
     "dev": "node scripts/dev-server.js",
-    "test": "node --test test/security.test.js test/claims.test.js"
+    "test": "node --test test/security.test.js test/claims.test.js test/hq.test.js"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.2",

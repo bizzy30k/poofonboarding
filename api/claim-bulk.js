@@ -15,6 +15,7 @@ const claims = require('../lib/claims');
 const { places, hoursFromWeekdayText } = require('../lib/places');
 const { sendClaimBulkEmails } = require('../lib/mail');
 const klaviyo = require('../lib/klaviyo');
+const hq = require('../lib/hq');
 
 const CRSA = /^CRSA\d{6,8}$/;
 const MAX_IDS = 60;
@@ -46,6 +47,7 @@ module.exports = async (req, res) => {
     if (s.chain !== src.chain) { skipped.push({ id, reason: 'different licence' }); continue; }
     if (taken.has(id)) { skipped.push({ id, reason: 'already claimed' }); continue; }
     const g = await places(s); // cached + capped; null when Google has nothing or the cap is hit
+    const h = await hq.match(s).catch(() => null); // one core search per chain, cached
     const phone = claims.v.phone(g && g.phone) || src.listing.phone;
     const hours = hoursFromWeekdayText(g && g.hours) || src.listing.hours;
     const needsReview = [];
@@ -65,6 +67,7 @@ module.exports = async (req, res) => {
       contact: src.contact,
       listing: { ...src.listing, phone, hours },
       copiedFrom: from,
+      hq: h,
       needsReview,
       googlePhone: g && g.phone ? g.phone : null,
       ip,

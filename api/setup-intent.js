@@ -11,6 +11,7 @@ const config = require('../lib/config');
 const record = require('../lib/record');
 const stores = require('../lib/stores');
 const sec = require('../lib/security');
+const hq = require('../lib/hq');
 
 
 function validate(b) {
@@ -64,7 +65,12 @@ module.exports = async (req, res) => {
     const locIds = new Set(locs.map(l => l.id));
     const groups = b.groups.map(g => ({ name: g.name, ids: g.ids.filter(id => locIds.has(id)) })).filter(g => g.ids.length);
 
-    const rec = { store: b.store, entryStoreId: b.entryStoreId, locations: locs, groups, systems: b.systems, owner: b.owner, referral: b.referral, acceptance: null };
+    // Poof HQ store ids per location (read-only core lookup; null when core has no such store yet)
+    const hqMap = await hq.matchAll(locs.map(l => ({ ...l, chainName: b.store.chainName }))).catch(() => ({}));
+    const hqMeta = hq.stripeMeta(hqMap);
+    const entryHq = hqMap[b.entryStoreId] || hqMap[locs[0].id];
+    const description = `Poof retailer — ${b.store.chainName} (${locs.length})${entryHq ? ` · hq:${entryHq.id}` : ''}`;
+    const rec = { store: b.store, entryStoreId: b.entryStoreId, locations: locs, groups, systems: b.systems, owner: b.owner, referral: b.referral, acceptance: null, hq: hqMap };
 
     let customer;
     if (b.customerId) {
@@ -75,8 +81,8 @@ module.exports = async (req, res) => {
       const prevRec = record.unpack(prev.metadata || {});
       if (prevRec && prevRec.acceptance && prevRec.acceptance.at) return res.status(409).json({ error: 'This signup is already complete.' });
       customer = await stripe.customers.update(b.customerId, {
-        name: b.store.chainName, email: b.owner.email, phone: b.owner.mobile || undefined,
-        metadata: record.pack(rec, record.chunksIn(prev.metadata)),
+        name: b.store.chainName, email: b.owner.email, phone: b.owner.mobile || undefined, description,
+        metadata: { ...record.pack(rec, record.chunksIn(prev.metadata)), ...hqMeta },
       });
     } else {
       const ts = await sec.verifyTurnstile(b.turnstile, ip);
@@ -93,8 +99,8 @@ module.exports = async (req, res) => {
       if (reuse) {
         customer = await stripe.customers.update(reuse.id, {
           name: b.store.chainName, email: b.owner.email, phone: b.owner.mobile || undefined,
-          description: `Poof retailer — ${b.store.chainName} (${locs.length})`,
-          metadata: record.pack(rec, record.chunksIn(reuse.metadata)),
+          description,
+          metadata: { ...record.pack(rec, record.chunksIn(reuse.metadata)), ...hqMeta },
           address: { line1: locs[0].addr, city: locs[0].city, state: 'ON', postal_code: locs[0].postal, country: 'CA' },
           shipping: { name: b.store.chainName, address: { line1: locs[0].addr, city: locs[0].city, state: 'ON', postal_code: locs[0].postal, country: 'CA' } },
         });
@@ -102,8 +108,8 @@ module.exports = async (req, res) => {
         name: b.store.chainName,
         email: b.owner.email,
         phone: b.owner.mobile || undefined,
-        description: `Poof retailer — ${b.store.chainName} (${locs.length})`,
-        metadata: record.pack(rec),
+        description,
+        metadata: { ...record.pack(rec), ...hqMeta },
         // Billing address is replaced by the card's billing details at /api/accept; until then (or if the
         // card is skipped) the first store's address stands in. The store itself is the shipping address.
         address: { line1: locs[0].addr, city: locs[0].city, state: 'ON', postal_code: locs[0].postal, country: 'CA' },

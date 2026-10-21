@@ -31,6 +31,7 @@ const claims = require('../lib/claims');
 const { sendClaimEmails } = require('../lib/mail');
 const { places } = require('../lib/places');
 const klaviyo = require('../lib/klaviyo');
+const hq = require('../lib/hq');
 
 const CRSA = /^CRSA\d{6,8}$/;
 const cleanId = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -133,11 +134,13 @@ module.exports = async (req, res) => {
       ip,
       source: 'onboarding.poof.ca/claim',
     };
-    const [, siblings, google] = await Promise.all([
-      claims.putRecord(rec),
+    const [siblings, google, hqRec] = await Promise.all([
       claims.unclaimedSiblings(store, stores.chain(store.chain)),
       places(store).catch(() => null), // usually cached from the page's prefill call; only feeds the ownership verdict
+      hq.match(store).catch(() => null), // Poof HQ store id (read-only lookup) — travels with the record, the email and Stripe
     ]);
+    rec.hq = hqRec || (prev && prev.hq) || null;
+    await claims.putRecord(rec);
 
     const token = claims.editToken(id, rec.contact.email);
     const core = claims.toCoreListing(rec);
@@ -151,6 +154,7 @@ module.exports = async (req, res) => {
       locations: 1, unclaimed_siblings: siblings.length,
       pos_url: `${config.SITE_URL}/s/${id}?t=${token}&utm_source=klaviyo&utm_medium=email&utm_campaign=claimed-not-connected`,
       edit_url: `${config.SITE_URL}/claim/${id}?t=${token}`,
+      hq_store_id: rec.hq ? rec.hq.id : '', hq_url: rec.hq ? rec.hq.url : '',
     }, {
       claimed_at: rec.claimedAt, chain: rec.chain, store_count: 1, last_claim_store: id, claim_source: 'onboarding.poof.ca',
     }).catch(e => ({ error: e.message }));

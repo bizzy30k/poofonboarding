@@ -99,7 +99,11 @@ module.exports = async (req, res) => {
     rec.conflicts = guard.conflicts;
     rec.conflictsChecked = guard.ok;
 
-    const update = { metadata: record.pack(rec, record.chunksIn(customer.metadata)) };
+    // Poof HQ ids: fill any location core didn't know at the start of the signup (read-only lookup)
+    const hq = require('../lib/hq');
+    rec.hq = rec.hq || {};
+    for (const l of rec.locations) if (!rec.hq[l.id]) rec.hq[l.id] = await hq.match({ ...l, chainName: rec.store.chainName }).catch(() => null);
+    const update = { metadata: { ...record.pack(rec, record.chunksIn(customer.metadata)), ...hq.stripeMeta(rec.hq) } };
     if (si) update.invoice_settings = { default_payment_method: si.payment_method };
     if (billing) { update.address = billing.address; update.metadata.billing_name = billing.name; update.metadata.billing_address = `${billing.address.line1}, ${billing.address.city} ${billing.address.state} ${billing.address.postal_code}`.slice(0, 500); }
     update.metadata.conflicts = rec.conflicts.length ? rec.conflicts.map(c => `${c.customerId}:${c.overlap.length}`).join(';').slice(0, 500) : '';
