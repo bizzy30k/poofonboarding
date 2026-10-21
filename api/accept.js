@@ -66,10 +66,17 @@ module.exports = async (req, res) => {
     }
 
     // 1. Card — required unless explicitly skipped
-    let si = null;
+    let si = null, billing = null;
     if (!cardSkipped) {
       si = await stripe.setupIntents.retrieve(setupIntentId);
       if (si.customer !== customerId || si.status !== 'succeeded') return res.status(400).json({ error: 'Card was not saved. Please add it again.' });
+      // The card's billing details (collected by Stripe's Address Element on the page) are the customer's
+      // billing address — not the store's AGCO address. Read from Stripe, never from the request body.
+      let pm = null; try { pm = await stripe.paymentMethods.retrieve(si.payment_method); } catch (e) { console.warn('accept: could not read billing details', e.message); }
+      const bd = pm && pm.billing_details;
+      if (bd && bd.address && bd.address.line1 && bd.address.postal_code) {
+        billing = { name: bd.name || rec.owner.name, email: bd.email || rec.owner.email, address: { line1: bd.address.line1, line2: bd.address.line2 || undefined, city: bd.address.city, state: bd.address.state, postal_code: bd.address.postal_code, country: bd.address.country } };
+      }
     }
 
     // 2. Acceptance record
@@ -84,6 +91,7 @@ module.exports = async (req, res) => {
     rec.setupIntent = si ? si.id : null;
     rec.paymentMethod = si ? si.payment_method : null;
     rec.cardSkipped = !si;
+    rec.billing = billing;
     rec.offer = (si && config.offerActive()) ? { code: config.LAUNCH_OFFER.code, months: config.LAUNCH_OFFER.months, grantedAt: rec.acceptance.at } : null;
 
     // 3. Franchise guard — flag doors already on another customer (fail-open here; fail-closed at activation)
@@ -93,6 +101,7 @@ module.exports = async (req, res) => {
 
     const update = { metadata: record.pack(rec, record.chunksIn(customer.metadata)) };
     if (si) update.invoice_settings = { default_payment_method: si.payment_method };
+    if (billing) { update.address = billing.address; update.metadata.billing_name = billing.name; update.metadata.billing_address = `${billing.address.line1}, ${billing.address.city} ${billing.address.state} ${billing.address.postal_code}`.slice(0, 500); }
     update.metadata.conflicts = rec.conflicts.length ? rec.conflicts.map(c => `${c.customerId}:${c.overlap.length}`).join(';').slice(0, 500) : '';
     update.metadata.offer = rec.offer ? rec.offer.code : '';
     update.metadata.card_on_file = si ? 'yes' : 'no — collect on setup call';

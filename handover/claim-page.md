@@ -220,6 +220,15 @@ The per-store outreach email now points at `onboarding.poof.ca/claim/<CRSA>` ins
 `/s/<CRSA>`. `scripts/export-links.js` now writes a `claim_link` column next to `link` in
 `data/store-links.csv` (`npm run links` to regenerate).
 
+## Billing address (signup card step)
+
+The Stripe customer's `address` is the **billing** address, taken from the card's billing details
+after the card is saved (`/api/accept` reads `paymentMethods.retrieve(pm).billing_details`, never the
+request body). The store's AGCO address is the customer's `shipping` address. The page collects the
+billing address with Stripe's Address Element (mode `billing`, CA/US, mandatory) above the card
+field; Link is disabled (`wallets.link: 'never'`) so the card is typed in as normal. If the card is
+skipped, `address` falls back to the first store's address until the setup call.
+
 ## Fixed on the way
 
 `lib/mail.js → internalEmail` passed `to` as a string; the SendGrid path calls `to.map(...)`, so
