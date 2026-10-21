@@ -2,39 +2,9 @@
 // GET /api/lookup?chain=sessions-cannabis → one chain with every authorized store
 // GET /api/lookup?chain=…&places=1   → same, plus Google Places details for the chain's first store (optional)
 const stores = require('../lib/stores');
-const config = require('../lib/config');
-
 const sec = require('../lib/security');
 
-// Google Places costs money per call. Cache results per store for the life of the
-// instance and cap Places lookups globally per minute, independent of IP.
-const placesCache = new Map(); // storeId → { at, data }
-const PLACES_TTL = 6 * 3600e3;
-
-async function places(store) {
-  if (!config.GOOGLE_PLACES_KEY) return null;
-  const hit = placesCache.get(store.id);
-  if (hit && Date.now() - hit.at < PLACES_TTL) return hit.data;
-  if (!sec.rateLimit('places:global', 30, 60e3)) return null; // soft cap: 30 Places lookups / min / instance
-  try {
-    const q = encodeURIComponent(`${store.name} ${store.addr} ${store.city} Ontario`);
-    const f = await sec.fetchT(`https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${q}&inputtype=textquery&fields=place_id&key=${config.GOOGLE_PLACES_KEY}`);
-    const j = await f.json();
-    const id = j.candidates && j.candidates[0] && j.candidates[0].place_id;
-    if (!id) return null;
-    const d = await sec.fetchT(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${id}&fields=rating,user_ratings_total,formatted_phone_number,website,opening_hours&key=${config.GOOGLE_PLACES_KEY}`);
-    const r = (await d.json()).result || {};
-    const data = {
-      rating: r.rating || null,
-      ratings: r.user_ratings_total || null,
-      phone: r.formatted_phone_number || null,
-      website: /^https?:\/\//i.test(r.website || '') ? r.website : null,
-      hours: r.opening_hours && r.opening_hours.weekday_text ? r.opening_hours.weekday_text : null,
-    };
-    placesCache.set(store.id, { at: Date.now(), data });
-    return data;
-  } catch (e) { return null; }
-}
+const { places } = require('../lib/places');
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=300');

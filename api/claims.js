@@ -7,6 +7,8 @@
 //        `url` is the listing's marketplace URL; defaults to MARKETPLACE_URL (poof.ca).
 //        Call this after the details are in Poof HQ — the email promises the listing is visible.
 //   POST /api/claims  { action: 'resend', id }   re-sends the "updated" email (email 1)
+//   POST /api/claims  { action: 'release', id }  unlocks the listing (deletes the claim record) — use when
+//        the real owner writes in saying "I didn't claim this". The store can then be claimed again.
 //
 // Idempotent: publishing twice re-sends the live email but keeps the first publishedAt.
 const sec = require('../lib/security');
@@ -51,10 +53,15 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, id, status: rec.status, publishedAt: rec.publishedAt, liveUrl: url, mail, klaviyo: k });
       }
       if (b.action === 'resend') {
-        const mail = await sendClaimEmails(rec, claims.toCoreListing(rec));
+        const mail = await sendClaimEmails(rec, claims.toCoreListing(rec), { token: claims.editToken(id, rec.contact.email), siblings: 0 });
         return res.status(200).json({ ok: true, id, mail });
       }
-      return res.status(400).json({ error: "action must be 'publish' or 'resend'." });
+      if (b.action === 'release') {
+        await claims.deleteRecord(id);
+        console.log('claims: released', { id, was: rec.contact.email });
+        return res.status(200).json({ ok: true, id, released: true });
+      }
+      return res.status(400).json({ error: "action must be 'publish', 'resend' or 'release'." });
     }
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (e) {

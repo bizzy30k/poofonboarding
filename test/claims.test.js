@@ -15,14 +15,19 @@ require.cache[require.resolve('@vercel/blob')] = { id: 'blob', filename: 'blob',
   put: async (pathname, body, opts) => { store.set(pathname, { body: Buffer.isBuffer(body) ? body : Buffer.from(String(body)), opts }); return { url: `https://x.public.blob.vercel-storage.com/${pathname}`, pathname }; },
   get: async (pathname) => { const e = store.get(pathname); if (!e) { const err = new Error('nf'); err.name = 'BlobNotFoundError'; throw err; } return { statusCode: 200, stream: new Blob([e.body]).stream() }; },
   list: async ({ prefix }) => ({ blobs: [...store.keys()].filter(k => k.startsWith(prefix)).map(pathname => ({ pathname, url: 'u' })), hasMore: false }),
+  del: async (pathname) => { store.delete(pathname); },
 } };
 
 const claims = require(path.join('..', 'lib', 'claims'));
 const claim = require(path.join('..', 'api', 'claim'));
 const admin = require(path.join('..', 'api', 'claims'));
+const bulk = require(path.join('..', 'api', 'claim-bulk'));
+const placesLib = require(path.join('..', 'lib', 'places'));
 const stores = require(path.join('..', 'lib', 'stores'));
 
-const ANY = stores.chain(Object.keys(require('../data/stores.json').chains.reduce((m, c) => (m[c.slug] = 1, m), {}))[0]).stores[0];
+const CHAIN = stores.chain(require('../data/stores.json').chains.find(c => c.stores.length >= 3).slug);
+const ANY = CHAIN.stores[0];
+let TOKEN = '';
 const HOURS = { monday: { open: '10:00 AM', close: '10:00 PM' }, sunday: null };
 const FULL = (over = {}) => ({ logo: PNG, phone: '519-555-0100', website: 'thewestore.ca', description: 'Windsor\'s friendliest shop.', hours: HOURS, ...over });
 const PNG = 'data:image/png;base64,' + Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]).toString('base64');
@@ -73,6 +78,10 @@ test('claim: stores logo publicly, record privately, returns core-shaped fields 
   await claim(post({ id: ANY.id, name: 'Mo Khan', email: 'mo@store.ca', listing: FULL({ instagram: '@thewestore' }) }), r);
   assert.equal(r.code, 200, JSON.stringify(r.body));
   assert.equal(r.body.revision, 1);
+  assert.ok(r.body.token && r.body.token.length === 64, 'edit token');
+  assert.ok(r.body.siblings.length >= 2, 'unclaimed siblings listed');
+  assert.ok(!r.body.siblings.find(x => x.id === ANY.id));
+  TOKEN = r.body.token;
   assert.match(r.body.logoUrl, /\/claims\/CRSA\d+\/logo\.png$/);
   assert.equal(store.get(`claims/${ANY.id}/logo.png`).opts.access, 'public');
   const enc = store.get(`claims/${ANY.id}/claim.enc`);
@@ -92,18 +101,90 @@ test('claim: stores logo publicly, record privately, returns core-shaped fields 
   assert.equal(a.body.core.poof.stage, 'claimed');
 });
 
-test('claim: second submit keeps the logo when none is sent and bumps revision', async () => {
-  const r = res();
-  await claim(post({ id: ANY.id, name: 'Mo Khan', email: 'mo@store.ca', listing: FULL({ logo: '', description: 'Updated.' }) }), r);
-  assert.equal(r.code, 200);
+test('claim: locked after the first claim — 409 without the edit token, edit with it keeps logo + bumps revision', async () => {
+  let r = res();
+  await claim(post({ id: ANY.id, name: 'Someone Else', email: 'else@other.ca', listing: FULL() }), r);
+  assert.equal(r.code, 409); assert.equal(r.body.error, 'already_claimed'); assert.ok(r.body.claimedAt);
+  r = res();
+  await claim(post({ id: ANY.id, name: 'Mo Khan', email: 'mo@store.ca', t: 'nope', listing: FULL() }), r);
+  assert.equal(r.code, 409);
+  r = res();
+  await claim(post({ id: ANY.id, name: 'Mo Khan', email: 'mo@store.ca', t: TOKEN, listing: FULL({ logo: '', description: 'Updated.' }) }), r);
+  assert.equal(r.code, 200, JSON.stringify(r.body));
   assert.equal(r.body.revision, 2);
   assert.match(r.body.logoUrl, /logo\.png$/);
+  assert.equal(r.body.token, TOKEN, 'token is stable across edits');
+});
+
+test('claim: GET status — public says claimed, owner token returns the record for prefill', async () => {
+  let r = res(); await claim({ method: 'GET', headers: {}, query: { id: ANY.id } }, r);
+  assert.equal(r.code, 200); assert.equal(r.body.claimed, true); assert.ok(r.body.claimedAt); assert.equal(r.body.contact, undefined);
+  r = res(); await claim({ method: 'GET', headers: {}, query: { id: ANY.id, t: 'bad' } }, r);
+  assert.equal(r.body.owner, undefined);
+  r = res(); await claim({ method: 'GET', headers: {}, query: { id: ANY.id, t: TOKEN } }, r);
+  assert.equal(r.body.owner, true); assert.equal(r.body.contact.email, 'mo@store.ca'); assert.equal(r.body.listing.description, 'Updated.');
+  assert.ok(r.body.siblings.length >= 2);
+  r = res(); await claim({ method: 'GET', headers: {}, query: { id: CHAIN.stores[1].id } }, r);
+  assert.deepEqual(r.body, { claimed: false });
+});
+
+test('claim-bulk: claims the siblings with the source listing, skips taken/foreign stores, needs the token', async () => {
+  const sib = CHAIN.stores.slice(1, 3).map(s => s.id);
+  const other = stores.load().chains.find(c => c.slug !== CHAIN.slug).stores[0].id;
+  let r = res(); await bulk(post({ from: ANY.id, t: 'bad', ids: sib }), r); assert.equal(r.code, 403);
+  r = res(); await bulk(post({ from: ANY.id, t: TOKEN, ids: [...sib, other, ANY.id, 'CRSA0000000'] }), r);
+  assert.equal(r.code, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.claimed, sib);
+  assert.deepEqual(r.body.skipped.map(x => x.reason).sort(), ['different licence', 'no such store']);
+  const a = res(); await admin({ method: 'GET', headers: { 'x-admin-key': process.env.ADMIN_KEY }, query: { id: sib[0] } }, a);
+  assert.equal(a.body.claim.copiedFrom, ANY.id);
+  assert.equal(a.body.claim.contact.email, 'mo@store.ca');
+  assert.equal(a.body.core.imageUrl, `https://x.public.blob.vercel-storage.com/claims/${ANY.id}/logo.png`);
+  assert.equal(a.body.core.contactNumber, '5195550100'); // no Places key in tests → copied from source
+  assert.ok(a.body.claim.needsReview.length === 2);
+  // second run: nothing left to claim
+  r = res(); await bulk(post({ from: ANY.id, t: TOKEN, ids: sib }), r);
+  assert.deepEqual(r.body.claimed, []); assert.equal(r.body.skipped[0].reason, 'already claimed');
+  // the GET for the source no longer lists them
+  r = res(); await claim({ method: 'GET', headers: {}, query: { id: ANY.id, t: TOKEN } }, r);
+  assert.ok(!r.body.siblings.find(x => sib.includes(x.id)));
+});
+
+test('admin: release unlocks a store so it can be claimed again', async () => {
+  const id = CHAIN.stores[1].id;
+  let a = res(); await admin({ method: 'POST', headers: { 'x-admin-key': process.env.ADMIN_KEY }, body: { action: 'release', id }, query: {} }, a);
+  assert.equal(a.code, 200); assert.equal(a.body.released, true);
+  let r = res(); await claim({ method: 'GET', headers: {}, query: { id } }, r); assert.deepEqual(r.body, { claimed: false });
+  r = res(); await claim(post({ id, name: 'Real Owner', email: 'owner@real.ca', listing: FULL() }, { 'x-forwarded-for': '198.51.100.7' }), r);
+  assert.equal(r.code, 200, JSON.stringify(r.body)); assert.equal(r.body.revision, 1);
+});
+
+test('places: weekday_text → 12-hour hours; ownership scoring', () => {
+  const h = placesLib.hoursFromWeekdayText(['Monday: 10:00 AM – 9:00 PM', 'Tuesday: 10:00\u202fAM\u2009–\u20099:00\u202fPM', 'Wednesday: Closed', 'Thursday: Open 24 hours', 'Friday: 9:00 AM – 12:00 PM, 1:00 – 5:00 PM', 'Sunday: 11 AM – 6 PM']);
+  assert.deepEqual(h.monday, { open: '10:00 AM', close: '9:00 PM' });
+  assert.deepEqual(h.tuesday, { open: '10:00 AM', close: '9:00 PM' });
+  assert.equal(h.wednesday, null);
+  assert.deepEqual(h.thursday, { open: '12:00 AM', close: '11:59 PM' });
+  assert.deepEqual(h.friday, { open: '9:00 AM', close: '5:00 PM' });
+  assert.deepEqual(h.saturday, null);
+  assert.deepEqual(h.sunday, { open: '11:00 AM', close: '6:00 PM' });
+  assert.ok(claims.v.hours(h), 'parsed hours pass the claim validator');
+  assert.equal(placesLib.hoursFromWeekdayText(null), null);
+  assert.equal(placesLib.hoursFromWeekdayText(['garbage']), null);
+
+  const rec = (email, website, phone) => ({ contact: { name: 'M', email }, listing: { website: claims.v.website(website), phone: claims.v.phone(phone) } });
+  const g = { phone: '(519) 419-1724', website: 'https://www.crownleaf.ca/' };
+  assert.equal(claims.ownership(rec('mo@crownleaf.ca', 'crownleaf.ca', '519-000-0000'), g).verdict, 'LIKELY');
+  assert.equal(claims.ownership(rec('mo@gmail.com', 'crownleaf.ca', '5194191724'), g).verdict, 'LIKELY');
+  const o = claims.ownership(rec('mo@gmail.com', 'other.ca', '519-000-0000'), g);
+  assert.equal(o.verdict, 'REVIEW'); assert.ok(o.line.includes('free-mail')); assert.ok(o.line.includes('≠ Google'));
+  assert.equal(claims.ownership(rec('mo@gmail.com', 'crownleaf.ca', '519-000-0000'), null).verdict, 'REVIEW');
 });
 
 test('admin: requires header key, lists, publishes once', async () => {
   let a = res(); await admin({ method: 'GET', headers: {}, query: {} }, a); assert.equal(a.code, 401);
   a = res(); await admin({ method: 'GET', headers: { 'x-admin-key': process.env.ADMIN_KEY }, query: {} }, a);
-  assert.equal(a.body.claims.length, 1);
+  assert.ok(a.body.claims.length >= 1);
   a = res(); await admin({ method: 'POST', headers: { 'x-admin-key': process.env.ADMIN_KEY }, body: { action: 'publish', id: ANY.id, url: 'poof.ca/stores/we-store' }, query: {} }, a);
   assert.equal(a.code, 200); assert.equal(a.body.status, 'published'); assert.equal(a.body.liveUrl, 'https://poof.ca/stores/we-store');
   const first = a.body.publishedAt;
@@ -114,6 +195,7 @@ test('admin: requires header key, lists, publishes once', async () => {
 });
 
 test('claim: honeypot and cross-origin are rejected quietly', async () => {
-  let r = res(); await claim(post({ id: ANY.id, name: 'Bot', email: 'b@b.co', website: 'http://spam', listing: FULL() }), r); assert.equal(r.code, 200); assert.equal(store.size, 2);
+  const before = store.size;
+  let r = res(); await claim(post({ id: ANY.id, name: 'Bot', email: 'b@b.co', website: 'http://spam', listing: FULL() }), r); assert.equal(r.code, 200); assert.equal(store.size, before);
   r = res(); await claim(post({ id: ANY.id, name: 'X', email: 'x@x.co', listing: FULL() }, { origin: 'https://evil.example' }), r); assert.equal(r.code, 403);
 });
