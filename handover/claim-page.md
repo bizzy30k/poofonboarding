@@ -168,6 +168,22 @@ separate from `XZfA2H` (abandoned signup) so a claimed-only store never gets "yo
 - Core-team port: `lib/claims.js` is the storage seam (`putLogo`, `putRecord`, `getRecord`,
   `listRecords`). Swap for GCS / the core client; keep `toCoreListing()`.
 
+## To do — returning stores (core team)
+
+Neither the claim page nor the signup checks whether a CRSA has already been through. The data
+exists (claim record in storage, signup on the Stripe customer / in core) but no read is wired.
+Build before outreach goes out, so a store that already claimed doesn't get a blank form:
+
+- `/claim/<CRSA>` — if a claim exists: prefill the form from the saved record and say
+  "You claimed this listing on <date> — update anything below." Re-submit bumps `revision`
+  (already works) and should re-send the internal email only, not the owner's.
+- `/s/<CRSA>` — if a signup exists (customer with this licence in `locations`): short-circuit to
+  "This store is already on Poof — signed up <date> by <first name + initial>" with two choices:
+  *That's me, resend my order form* (uses the existing order-form link) and *Not me, contact us*.
+  `lib/conflicts.js` already finds customers by licence; reuse it.
+- Local draft (`sharedState.ts`) is per-browser and clears on completion by design — this is the
+  server-side check that replaces it for returning owners.
+
 ## Outreach link
 
 The per-store outreach email now points at `onboarding.poof.ca/claim/<CRSA>` instead of
