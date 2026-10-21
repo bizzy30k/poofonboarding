@@ -148,6 +148,36 @@ Honeypot: a top-level `website` key means bot → `200 {ok:true}`, nothing store
 **2 — on publish** · subject `<store> is live on Poof — have a look`
 Button to the listing URL, then the same POS button.
 
+## SendGrid — configuration
+
+Code: `lib/mail.js`. Picks SendGrid if `SENDGRID_API_KEY` is set, else Resend.
+
+1. SendGrid → Sender Authentication → authenticate `poof.ca` (3 CNAMEs in Cloudflare).
+2. API key with **Mail Send: Full Access** only.
+3. Env: `SENDGRID_API_KEY`; `FROM_EMAIL=Poof <contact@poof.ca>` (code default is baz@poof.ca — override);
+   `REPLY_TO=contact@poof.ca`; `ONBOARDING_INBOX` (default onboarding@poof.ca).
+4. Senders: claim finalised → `claimReceivedHtml` (owner) + `sendClaimEmails` internal; publish →
+   `claimLiveHtml`; signup accepted → order form + internal summary. Owner-facing claim copy is fixed.
+5. Test on the preview with a real address — both claim emails arrive within a minute.
+
+## Klaviyo — configuration
+
+Code: `lib/klaviyo.js`, Events API revision 2025-01-15, one `track(metric, email, props)`.
+
+1. Use the **existing** private key (`KLAVIYO_API_KEY`), production only. The live flow `XZfA2H`
+   triggers on metric `TfdJen` (*Onboarding Started*) under that key's API source — a new key means
+   new metric IDs and the flow goes silent.
+2. Metric names are the contract, exact strings: `Onboarding Started`, `Onboarding Progress`
+   (`stage`), `Onboarding Completed`, `Onboarding Waitlist`, `Listing Claimed`, `Listing Published`;
+   `Call Booked` comes from Zapier/Calendly.
+3. Profile on every event: `email`, `first_name`, `properties.store`, `properties.retailer: true`.
+   Event props (snake_case): `store`, `chain`, `entry_store`, `resume_url`, `pos_url`, `live_url`,
+   `revision`. Templates use `{{ event.store }}` — keep the key.
+4. Existing flow: `XZfA2H` (trigger Onboarding Started; exits Onboarding Completed / Call Booked).
+   Claim-side flows (outreach drip; Listing Claimed → nudge to `/s/`, exit Onboarding Started) are
+   built in Klaviyo by Poof, not in code.
+5. Test: fire a claim with a test email → Klaviyo → Profiles → activity shows *Listing Claimed*.
+
 ## Klaviyo
 
 Two new metrics, same API key / API source as the onboarding metrics: `Listing Claimed`,
