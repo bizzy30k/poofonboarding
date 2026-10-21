@@ -10,6 +10,22 @@ Reference implementation: front end in `poof-onboarding-react` (`src/components/
 API in this repo (`api/claim.js`, `api/claims.js`, `lib/claims.js`). Both are tested
 (`npm test` here; `npm test` + `npm run test:e2e` there).
 
+## Run it
+
+```bash
+# API (this repo)
+npm install && cp .env.example .env    # SIGNING_SECRET, ADMIN_KEY; BLOB_READ_WRITE_TOKEN for claims to persist
+npm run dev                             # http://localhost:3000
+npm test                                # 25 tests, Blob mocked
+
+# Front end (bizzy30k/poof-onboarding-react, branch claim-listing)
+npm install
+VITE_API_PROXY=http://localhost:3000 npm run dev        # against the local API
+# or offline:  node tests/mock-api.mjs & VITE_API_PROXY=http://localhost:8787 npm run dev
+open http://localhost:5173/claim/CRSA1537578
+npm test && npm run test:e2e            # vitest 30, Playwright 5
+```
+
 ## The one form
 
 Bare minimum for a claimed listing — **required**: name, email, logo, phone, website,
