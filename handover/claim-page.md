@@ -187,6 +187,19 @@ Google lists. Nothing is live until `publish`.
 >
 > Every link carries `utm_source=sendgrid&utm_medium=email&utm_campaign=…&utm_content=…`.
 
+**Logo escape hatches.** `listing.logoFrom: 'google'` → the API fetches the store's Google Business photo
+server-side (`lib/places.js → photo()`) and stores it as the logo, flagged `needsReview`. `listing.logoLater: true` →
+saved with no logo, flagged; email 1 asks the owner to reply with it. `GET /api/photo?store=` is the preview proxy.
+Description is prefilled on the page ("Licensed cannabis retailer in {city}…").
+
+**Signup from a claim.** The POS button and the emails link to `/s/<CRSA>?t=<token>&also=…`. The page verifies the
+token (`GET /api/claim?id&t`), prefills owner name + email, selects every claimed store and starts at pricing;
+`POST /api/lead` stage `started` accepts `claimToken` in place of Turnstile when it matches the record.
+
+**Klaviyo profile properties** set alongside events: `claimed_at`, `chain`, `store_count`, `last_claim_store`
+(Listing Claimed); `pos_started`, `pos_stage`, `pos_from_claim` (Onboarding Started); `pos_connected`,
+`pos_completed_at` (Completed); `listing_live`, `listing_published_at` (Published).
+
 Email 1 also carries **Edit your listing** (the signed `?t=` link) and, when the licence has other
 unclaimed stores, **Claim your other N locations** (`?t=…&more=1`).
 
