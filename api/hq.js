@@ -17,9 +17,11 @@ module.exports = async (req, res) => {
   }
   const kw = String(q.q || '').slice(0, 80);
   if (kw.length < 2) return res.status(400).json({ error: 'Pass ?q= or ?store=' });
-  const rows = await hq.search(kw);
+  // ?core=https://api.poof.ca/v1 — try another core base (poof.ca hosts only) without redeploying
+  const alt = /^https:\/\/[a-z0-9.-]+\.poof\.ca(\/[a-z0-9./_-]*)?$/i.test(String(q.core || '')) ? String(q.core).replace(/\/+$/, '') : undefined;
+  const rows = await hq.search(kw, alt);
   return res.status(200).json({
-    enabled: hq.enabled(), core: hq.url, q: kw, count: rows.length, lastError: hq.lastError(),
+    enabled: hq.enabled(), core: alt || hq.url, q: kw, count: rows.length, lastError: hq.lastError(),
     rows: rows.slice(0, 50).map(r => ({ id: r.id || r._id, slug: r.slug, name: r.displayAs || r.name, licenseNumber: r.licenseNumber || (r.license && r.license.licenseNumber) || null, address: r.location ? `${r.location.address}, ${r.location.city} ${r.location.postalCode}` : null, owner: r.owner || null, isValidated: !!r.isValidated })),
   });
 };
