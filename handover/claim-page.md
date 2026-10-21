@@ -90,9 +90,33 @@ The page edits hours as 24-hour `HH:MM` internally (native time inputs) and conv
 }
 ```
 
-Reply `{ ok, id, logoUrl, revision }`. Errors `{ error, fields: [...] }` with 400/403/404/429 —
-`fields` names what's malformed or missing (`Required: website, description.`).
-A second submit for the same store keeps the previous logo if none is sent and bumps `revision`.
+Reply `{ ok, id, logoUrl, revision, token, chainName, siblings: [{ id, name, addr, city }] }`.
+Errors `{ error, fields: [...] }` with 400/403/404/429 — `fields` names what's malformed or missing
+(`Required: website, description.`).
+
+**Lock.** The first claim wins. A later POST for the same CRSA returns
+`409 { error: 'already_claimed', claimedAt }` unless it carries `t` = the owner's edit token
+(returned above and in their email). With the token: previous logo kept if none is sent, `revision`
+bumps, `contact` stays the original claimant (an edit can't hand the listing to a new email).
+To move a listing to someone else, an admin **releases** it (below) after the owner writes in.
+
+`token` = HMAC(`SIGNING_SECRET`, `claim-edit:<CRSA>:<email>`) — stable, never expires, bound to
+the claiming email. Edit link: `/claim/<CRSA>?t=<token>`; "claim the rest" link: `…&more=1`.
+
+### `GET /api/claim?id=CRSA…` (public) · `&t=<token>` (owner)
+
+`{ claimed: false }` or `{ claimed: true, claimedAt, storeName, status }`. With the owner's token,
+also `owner: true, contact, listing, siblings` — the page prefills the form from it.
+
+### `POST /api/claim-bulk` — "claim the rest" (same-origin, token-authorised)
+
+`{ from: CRSA, t: <token>, ids: [CRSA…] }` → `{ ok, claimed: [...], skipped: [{ id, reason }] }`.
+Every `id` on the same licence that nobody has claimed gets a record with the source's logo,
+website, Instagram, description and contact. **Phone and hours come from Google Places per
+store**; when Google has nothing the source store's are copied and the record carries
+`needsReview: [...]` (shown in the internal email). Skips: `already claimed`, `different licence`,
+`no such store`. ≤60 ids; 3 runs/hr/source store. One owner email, one internal email, one
+Klaviyo `Listing Claimed` with `locations: n, bulk: true`.
 
 What it does, in order:
 
@@ -116,6 +140,21 @@ Honeypot: a top-level `website` key means bot → `200 {ok:true}`, nothing store
   `Listing Published`. `url` falls back to `MARKETPLACE_URL` env (default `https://poof.ca`).
   Idempotent: re-publishing re-sends the email, keeps the first `publishedAt`.
 - `POST { "action": "resend", "id" }` re-sends email 1 + the internal email.
+- `POST { "action": "release", "id" }` **unlocks** the store (deletes the claim record; the logo blob
+  stays). Use when someone writes in saying "I didn't claim this". The store can then be claimed again.
+
+### Ownership verdict (internal email)
+
+Manual approval, but scored so it's a 10-second read. `lib/claims.js → ownership(rec, google)`:
+
+- **LIKELY** — claimant's email domain matches the store website, or the phone they entered
+  matches Google's phone for that store, or the website matches Google's.
+- **REVIEW** — free-mail address (gmail, hotmail…) with nothing matching, or phone/website differ
+  from Google, or Google has nothing to compare.
+
+The subject line carries `[LIKELY]` / `[REVIEW]`; the first row is the full reason line. For REVIEW,
+reply from contact@poof.ca asking them to confirm from the store's own email, or call the number
+Google lists. Nothing is live until `publish`.
 
 ### Core fields a claim fills (`lib/claims.js → toCoreListing`)
 
@@ -145,8 +184,15 @@ Honeypot: a top-level `website` key means bot → `200 {ok:true}`, nothing store
 > We'll send you an email to have a look. In the meantime, if you are interested in connecting
 > your point-of-sale system, follow this link: **[Connect your point-of-sale system]** → `/s/<CRSA>`
 
+Email 1 also carries **Edit your listing** (the signed `?t=` link) and, when the licence has other
+unclaimed stores, **Claim your other N locations** (`?t=…&more=1`).
+
 **2 — on publish** · subject `<store> is live on Poof — have a look`
 Button to the listing URL, then the same POS button.
+
+**3 — on claim-bulk** · subject `Your N other <store> locations are updated on Poof`
+Lists every location with its own Edit link, then the POS button with `?also=` so the signup
+pre-selects all of them.
 
 ## SendGrid — configuration
 
@@ -198,21 +244,22 @@ separate from `XZfA2H` (abandoned signup) so a claimed-only store never gets "yo
 - Core-team port: `lib/claims.js` is the storage seam (`putLogo`, `putRecord`, `getRecord`,
   `listRecords`). Swap for GCS / the core client; keep `toCoreListing()`.
 
-## To do — returning stores (core team)
+## Returning stores
 
-Neither the claim page nor the signup checks whether a CRSA has already been through. The data
-exists (claim record in storage, signup on the Stripe customer / in core) but no read is wired.
-Build before outreach goes out, so a store that already claimed doesn't get a blank form:
+- `/claim/<CRSA>` — **done.** Claimed stores are locked; the owner's edit link prefills and saves
+  (`GET /api/claim?id&t`). Anyone else sees "already claimed on <date> — not you? contact@poof.ca".
+- `/s/<CRSA>` — **still to do.** If a signup exists (customer with this licence in `locations`):
+  short-circuit to "This store is already on Poof — signed up <date> by <first name + initial>" with
+  *That's me, resend my order form* and *Not me, contact us*. `lib/conflicts.js` already finds
+  customers by licence; reuse it.
+- Local draft (`sharedState.ts`) is per-browser and clears on completion by design.
 
-- `/claim/<CRSA>` — if a claim exists: prefill the form from the saved record and say
-  "You claimed this listing on <date> — update anything below." Re-submit bumps `revision`
-  (already works) and should re-send the internal email only, not the owner's.
-- `/s/<CRSA>` — if a signup exists (customer with this licence in `locations`): short-circuit to
-  "This store is already on Poof — signed up <date> by <first name + initial>" with two choices:
-  *That's me, resend my order form* (uses the existing order-form link) and *Not me, contact us*.
-  `lib/conflicts.js` already finds customers by licence; reuse it.
-- Local draft (`sharedState.ts`) is per-browser and clears on completion by design — this is the
-  server-side check that replaces it for returning owners.
+## Flow (front end)
+
+`/` finder → `/claim/<CRSA>` form → **Finalise** → (chain with unclaimed siblings) **Claim the rest**
+(`ClaimMore.tsx`: all ticked, one button, "Just this one for now") → **Done** (`ClaimDone.tsx`: one
+CTA, *Now connect your point-of-sale system* → `/s/<CRSA>?also=a,b,c`). `ClaimLocked.tsx` for a
+claimed store without the token. `?t=` is read once and stripped from the URL before analytics loads.
 
 ## Outreach link
 
