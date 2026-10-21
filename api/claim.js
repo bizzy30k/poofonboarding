@@ -101,8 +101,17 @@ module.exports = async (req, res) => {
     // Strict brakes count accepted submissions only, so a typo (or a stranger hitting a locked store) doesn't lock a real owner out.
     if (!sec.rateLimit(`claim:ip:${ip}`, 5, 3600e3) || !sec.rateLimit(`claim:store:${id}`, 6, 3600e3)) return sec.tooMany(res);
     let logoUrl = prev && prev.listing ? prev.listing.logoUrl || null : null;
-    if (!fields.logo && !logoUrl) return res.status(400).json({ error: 'Upload your logo.', fields: ['logo'] });
+    const needsReview = [];
     if (fields.logo) logoUrl = await claims.putLogo(id, fields.logo);
+    else if (L.logoFrom === 'google') {
+      // "Use my Google photo": fetched server-side so the Places key stays private
+      const p = await require('../lib/places').photo(store);
+      if (!p) return res.status(400).json({ error: "Google doesn't have a photo for this store — upload one, or email it to us later.", fields: ['logo'] });
+      logoUrl = await claims.putLogo(id, p);
+      needsReview.push('logo is the Google photo, not a logo');
+    } else if (L.logoLater === true && !logoUrl) {
+      needsReview.push('no logo yet — owner will email it');
+    } else if (!logoUrl) return res.status(400).json({ error: 'Upload your logo.', fields: ['logo'] });
 
     const now = new Date().toISOString();
     const rec = {
@@ -120,6 +129,7 @@ module.exports = async (req, res) => {
       contact: prev ? prev.contact : { name, email }, // the lock holder stays the contact; an edit can't hand the listing to a new email
       editor: prev && prev.contact.email.toLowerCase() !== email.toLowerCase() ? { name, email } : undefined,
       listing: { logoUrl, phone: fields.phone, email: fields.email, website: fields.website, instagram: fields.instagram, description: fields.description, hours: fields.hours },
+      needsReview: needsReview.length ? needsReview : undefined,
       ip,
       source: 'onboarding.poof.ca/claim',
     };
@@ -132,7 +142,7 @@ module.exports = async (req, res) => {
     const token = claims.editToken(id, rec.contact.email);
     const core = claims.toCoreListing(rec);
     const out = { ok: true, id, logoUrl, revision: rec.revision, token, chainName: rec.storeName, siblings };
-    const mail = await sendClaimEmails(rec, core, { token, siblings: siblings.length, google });
+    const mail = await sendClaimEmails(rec, core, { token, siblings: siblings.length, google, logoLater: !logoUrl });
     if (mail.retailer && mail.retailer.error) console.error('claim: retailer mail failed', mail.retailer.error);
     if (mail.internal && mail.internal.error) console.error('claim: internal mail failed', mail.internal.error);
     const k = await klaviyo.track('Listing Claimed', rec.contact.email, {

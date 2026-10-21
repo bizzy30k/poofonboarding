@@ -150,6 +150,16 @@ test('claim-bulk: claims the siblings with the source listing, skips taken/forei
   assert.ok(!r.body.siblings.find(x => sib.includes(x.id)));
 });
 
+test('claim: "email it later" saves without a logo and flags it; google photo without Places → 400', async () => {
+  const id = CHAIN.stores[5].id;
+  let r = res(); await claim(post({ id, name: 'Later Owner', email: 'later@store.ca', listing: FULL({ logo: '', logoLater: true }) }, { 'x-forwarded-for': '198.51.100.9' }), r);
+  assert.equal(r.code, 200, JSON.stringify(r.body)); assert.equal(r.body.logoUrl, null);
+  const a = res(); await admin({ method: 'GET', headers: { 'x-admin-key': process.env.ADMIN_KEY }, query: { id } }, a);
+  assert.ok(a.body.claim.needsReview[0].includes('no logo yet')); assert.equal(a.body.core.isProfileComplete, false);
+  r = res(); await claim(post({ id: CHAIN.stores[6].id, name: 'G', email: 'g@store.ca', listing: FULL({ logo: '', logoFrom: 'google' }) }, { 'x-forwarded-for': '198.51.100.10' }), r);
+  assert.equal(r.code, 400, JSON.stringify(r.body)); assert.deepEqual(r.body.fields, ['logo']); // no Places key in tests
+});
+
 test('places: opening time without a meridiem', () => {
   const h = placesLib.hoursFromWeekdayText(['Monday: 9:00 – 5:00 PM', 'Tuesday: 1:00 – 5:00 PM', 'Wednesday: 11:00 – 11:00 PM']);
   assert.deepEqual(h.monday, { open: '9:00 AM', close: '5:00 PM' });
