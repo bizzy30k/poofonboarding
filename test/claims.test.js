@@ -83,8 +83,8 @@ test('claim: stores logo publicly, record privately, returns core-shaped fields 
   assert.ok(!r.body.siblings.find(x => x.id === ANY.id));
   TOKEN = r.body.token;
   assert.match(r.body.logoUrl, /\/claims-dev\/CRSA\d+\/logo\.png$/);
-  assert.equal(store.get(`claims/${ANY.id}/logo.png`).opts.access, 'public');
-  const enc = store.get(`claims/${ANY.id}/claim.enc`);
+  assert.equal(store.get(`claims-dev/${ANY.id}/logo.png`).opts.access, 'public');
+  const enc = store.get(`claims-dev/${ANY.id}/claim.enc`);
   assert.equal(enc.opts.access, 'public');
   assert.ok(!enc.body.toString('utf8').includes('mo@store.ca'), 'record must not be readable in the blob');
 
@@ -139,7 +139,7 @@ test('claim-bulk: claims the siblings with the source listing, skips taken/forei
   const a = res(); await admin({ method: 'GET', headers: { 'x-admin-key': process.env.ADMIN_KEY }, query: { id: sib[0] } }, a);
   assert.equal(a.body.claim.copiedFrom, ANY.id);
   assert.equal(a.body.claim.contact.email, 'mo@store.ca');
-  assert.equal(a.body.core.imageUrl, `https://x.public.blob.vercel-storage.com/claims/${ANY.id}/logo.png`);
+  assert.equal(a.body.core.imageUrl, `https://x.public.blob.vercel-storage.com/claims-dev/${ANY.id}/logo.png`);
   assert.equal(a.body.core.contactNumber, '5195550100'); // no Places key in tests → copied from source
   assert.ok(a.body.claim.needsReview.length === 2);
   // second run: nothing left to claim
