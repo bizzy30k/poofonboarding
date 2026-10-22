@@ -82,7 +82,7 @@ test('claim: stores logo publicly, record privately, returns core-shaped fields 
   assert.ok(r.body.siblings.length >= 2, 'unclaimed siblings listed');
   assert.ok(!r.body.siblings.find(x => x.id === ANY.id));
   TOKEN = r.body.token;
-  assert.match(r.body.logoUrl, /\/claims\/CRSA\d+\/logo\.png$/);
+  assert.match(r.body.logoUrl, /\/claims-dev\/CRSA\d+\/logo\.png$/);
   assert.equal(store.get(`claims/${ANY.id}/logo.png`).opts.access, 'public');
   const enc = store.get(`claims/${ANY.id}/claim.enc`);
   assert.equal(enc.opts.access, 'public');
