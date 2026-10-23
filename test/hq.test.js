@@ -88,3 +88,10 @@ test('core document: exact core shape, merged over the core row, keyed by core i
   assert.strictEqual(s.id, 'abc'); assert.strictEqual(s.location.address, '809 Yonge St'); assert.deepStrictEqual(s.deliveryInformation, { hasDelivery: true, note: 'Uber' });
   assert.strictEqual(s.poof.stage, 'accepted');
 });
+
+test('duplicate licence rows: the richer row wins, then the older id', async () => {
+  mock(() => ({ body: { result: { items: [row({ id: 'bbb', description: null, imageUrl: null }), row({ id: 'aaa', description: null, imageUrl: null }), row({ id: 'ccc', imageUrl: 'x.png', source: 'poof' })] } } }));
+  assert.strictEqual((await hq.match(agco)).id, 'ccc');
+  hq._reset(); mock(() => ({ body: { result: { items: [row({ id: 'bbb', description: null, imageUrl: null }), row({ id: 'aaa', description: null, imageUrl: null })] } } }));
+  assert.strictEqual((await hq.match(agco)).id, 'aaa');
+});
