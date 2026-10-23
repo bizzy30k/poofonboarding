@@ -143,7 +143,7 @@ module.exports = async (req, res) => {
     await claims.putRecord(rec);
 
     const token = claims.editToken(id, rec.contact.email);
-    const core = claims.toCoreListing(rec);
+    const core = claims.toCoreListing(rec, await hq.row(store).catch(() => null));
     const out = { ok: true, id, logoUrl, revision: rec.revision, token, chainName: rec.storeName, siblings };
     const mail = await sendClaimEmails(rec, core, { token, siblings: siblings.length, google, logoLater: !logoUrl });
     if (mail.retailer && mail.retailer.error) console.error('claim: retailer mail failed', mail.retailer.error);

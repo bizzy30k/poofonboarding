@@ -95,8 +95,9 @@ test('claim: stores logo publicly, record privately, returns core-shaped fields 
   assert.equal(a.body.core.imageUrl, r.body.logoUrl);
   assert.equal(a.body.core.contactNumber, '5195550100');
   assert.equal(a.body.core.instagramUrl, 'https://instagram.com/thewestore');
-  assert.equal(a.body.core.operationHours.sunday, null);
-  assert.deepEqual(a.body.core.operationHours.monday, { open: '10:00 AM', close: '10:00 PM' });
+  assert.equal(a.body.core.operationHours.sun, null);
+  assert.deepEqual(a.body.core.operationHours.mon, { startTime: '10:00', endTime: '22:00' }); // core's 24h shape
+  assert.equal(a.body.core.licenseNumber, ANY.id);
   assert.equal(a.body.core.isProfileComplete, true);
   assert.equal(a.body.core.poof.stage, 'claimed');
 });

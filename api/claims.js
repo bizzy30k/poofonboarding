@@ -31,7 +31,8 @@ module.exports = async (req, res) => {
         if (!rec) return res.status(404).json({ error: 'No claim for that store.' });
         const store = require('../lib/stores').store(id);
         const google = store ? await require('../lib/places').places(store).catch(() => null) : null;
-        return res.status(200).json({ claim: rec, core: claims.toCoreListing(rec), google, ownership: claims.ownership(rec, google) });
+        const coreRow = store ? await require('../lib/hq').row(store).catch(() => null) : null;
+        return res.status(200).json({ claim: rec, core: claims.toCoreListing(rec, coreRow), google, ownership: claims.ownership(rec, google) });
       }
       // The approval page: every record plus the core-shaped fields and a cheap ownership read (no Google call).
       const list = await claims.listRecords();
@@ -57,7 +58,8 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, id, status: rec.status, publishedAt: rec.publishedAt, liveUrl: url, mail, klaviyo: k });
       }
       if (b.action === 'resend') {
-        const mail = await sendClaimEmails(rec, claims.toCoreListing(rec), { token: claims.editToken(id, rec.contact.email), siblings: 0 });
+        const st = require('../lib/stores').store(id);
+        const mail = await sendClaimEmails(rec, claims.toCoreListing(rec, st ? await require('../lib/hq').row(st).catch(() => null) : null), { token: claims.editToken(id, rec.contact.email), siblings: 0 });
         return res.status(200).json({ ok: true, id, mail });
       }
       if (b.action === 'release') {

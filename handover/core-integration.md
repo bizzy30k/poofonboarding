@@ -5,7 +5,7 @@
 ## The model
 
 - **onboarding.poof.ca** (Vercel) is the retailer **front door**: AGCO-verified store pick, locations, systems, agreement, card. Each signup is a Stripe customer; the full record lives in its metadata. No database.
-- **Poof HQ core** (`api.poof.ca/v1`) is the **system of record** for stores. The onboarding side sends every signup to core *in core's own store-document shape*, keyed by `license.licenseNumber` (CRSA). Core upserts; nothing to translate.
+- **Poof HQ core** (`api.poof.ca/v1`) is the **system of record** for stores. The onboarding side sends every signup to core *in core's own store-document shape*, keyed by core's own store `id`, which we look up read-only from `GET /v1/admin/store/list-unclaimed?unclaimed=true&count=500&search=<chain>` by `licenseNumber` (CRSA) — see `lib/hq.js`. Core upserts on `id`; nothing to translate. Every document is the store's current core row with the retailer's answers laid over it, so fields we don't collect (delivery zones, reviews, owner) come back unchanged.
 - Core never feeds the onboarding flow. The AGCO list is baked into the flow and rebuilt from the register (`scripts/import-agco.js`). Dependency runs one way: **onboarding → core**.
 
 ## Two ways to receive signups (same payload)
@@ -63,7 +63,7 @@ Poll nightly if you'd rather not run a webhook. Identical shape.
 
 ## Core store document (one per licence)
 
-Field names and nesting are copied from `GET /v1/admin/store/:id` on production. Upsert on `license.licenseNumber`.
+Field names, nesting and order are copied from `GET /v1/admin/store/list-unclaimed` on production (Oct 2026: top-level `licenseNumber`, `operationHours.{mon..sun}.{startTime,endTime}` 24h). Upsert on `id`; `licenseNumber` is the fallback join. Poof-side facts sit under `poof` (`poof.hqStoreId` repeats the id).
 
 ```jsonc
 {

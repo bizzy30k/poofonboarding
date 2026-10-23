@@ -38,7 +38,7 @@ module.exports = async (req, res) => {
       const c = await stripe.customers.retrieve(String(q.customerId));
       const rec = record.unpack(c.metadata || {});
       if (!rec) return res.status(404).json({ error: 'No onboarding record on that customer.' });
-      return res.status(200).json({ count: 1, signups: [envelope(rec, c)] });
+      return res.status(200).json({ count: 1, signups: [await envelope(rec, c)] });
     }
 
     // Scan onboarding customers (metadata.source is set by lib/record.pack)
@@ -57,9 +57,10 @@ module.exports = async (req, res) => {
         const lic = String(q.licenseNumber).toUpperCase();
         const loc = rec.locations.find(l => l.id === lic);
         if (!loc) continue;
-        return res.status(200).json({ count: 1, signups: [{ ...envelope(rec, c), stores: [core.toCoreStore(rec, loc, { customerId: c.id, stage })] }] });
+        const env = await envelope(rec, c);
+        return res.status(200).json({ count: 1, signups: [{ ...env, stores: env.stores.filter(d => d.licenseNumber === lic) }] });
       }
-      out.push(envelope(rec, c));
+      out.push(await envelope(rec, c));
       if (out.length >= limit) break;
     }
     if (q.licenseNumber) return res.status(404).json({ error: 'No signup includes that licence.' });

@@ -62,3 +62,29 @@ test('auth schemes: x-api-key and custom header', async () => {
   assert.strictEqual(calls[1].headers['x-admin-token'], 'test-key');
   process.env.CORE_API_AUTH = 'bearer';
 });
+
+test('core document: exact core shape, merged over the core row, keyed by core id; claim hours → 24h', () => {
+  const core = require('../lib/core');
+  const claims = require('../lib/claims');
+  const coreRow = row({ deliveryZones: [{ name: 'Zone 1' }], description: 'old', imageUrl: null });
+  const rec = { id: 'CRSA1254817', storeName: 'Weedjar', status: 'pending', claimedAt: '2026-10-23T00:00:00Z', hq: { id: 'x' },
+    location: { name: 'WEEDJAR', addr: '809 YONGE ST', city: 'TORONTO', postal: 'M4W 2G9' }, contact: { name: 'Jo', email: 'Jo@Weedjar.ca' },
+    listing: { logoUrl: 'https://b/logo.png', phone: '(647) 426-4646', website: 'https://weedjar.ca', instagram: 'weedjar', description: 'new', hours: { monday: { open: '10:00 AM', close: '11:00 PM' }, tuesday: null, wednesday: { open: '12:00 AM', close: '12:30 PM' } } } };
+  const d = claims.toCoreListing(rec, coreRow);
+  assert.strictEqual(d.id, '6a933bae02d36c993be88b5a');            // core's id wins over the cached one
+  assert.strictEqual(d.licenseNumber, 'CRSA1254817');
+  assert.strictEqual(d.description, 'new'); assert.strictEqual(d.imageUrl, 'https://b/logo.png');
+  assert.deepStrictEqual(d.deliveryZones, [{ name: 'Zone 1' }]);  // untouched core data survives
+  assert.strictEqual(d.contactNumber, '6474264646'); assert.strictEqual(d.contactEmail, 'jo@weedjar.ca');
+  assert.deepStrictEqual(d.operationHours.mon, { startTime: '10:00', endTime: '23:00' });
+  assert.strictEqual(d.operationHours.tue, null);
+  assert.deepStrictEqual(d.operationHours.wed, { startTime: '00:00', endTime: '12:30' });
+  assert.strictEqual(d.instagramUrl, 'https://instagram.com/weedjar');
+  assert.strictEqual(d.isProfileComplete, true);
+  const CORE_KEYS = ['id', 'source', 'slug', 'name', 'displayAs', 'contactName', 'contactEmail', 'contactNumber', 'location', 'geolocation', 'operationHours', 'acceptablePayment', 'deliveryInformation', 'deliveryZones', 'imageUrl', 'isValidated', 'isProfileComplete', 'description', 'website', 'facebookUrl', 'instagramUrl', 'xUrl', 'reviewCount', 'reviewRate', 'totalProductReview', 'licenseNumber', 'owner'];
+  assert.deepStrictEqual(Object.keys(d).filter(k => k !== 'poof'), CORE_KEYS, 'same keys, same order as core');
+  // signup document without a core row: AGCO fallback, id from the record's hq map
+  const s = core.toCoreStore({ store: { chainName: 'Weedjar' }, owner: { name: 'Jo', email: 'jo@weedjar.ca', mobile: '647 426 4646' }, systems: { delivery: true, deliverySoftware: 'Uber' }, hq: { CRSA1254817: { id: 'abc' } } }, { id: 'CRSA1254817', name: 'WEEDJAR', addr: '809 YONGE ST', city: 'TORONTO', postal: 'M4W 2G9' }, { stage: 'accepted' });
+  assert.strictEqual(s.id, 'abc'); assert.strictEqual(s.location.address, '809 Yonge St'); assert.deepStrictEqual(s.deliveryInformation, { hasDelivery: true, note: 'Uber' });
+  assert.strictEqual(s.poof.stage, 'accepted');
+});
