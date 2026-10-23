@@ -15,6 +15,16 @@ module.exports = async (req, res) => {
     if (!s) return res.status(404).json({ error: 'No such store.' });
     return res.status(200).json({ store: { id: s.id, name: s.name, chainName: s.chainName, addr: s.addr, city: s.city, postal: s.postal }, hq: await hq.match(s) });
   }
+  // ?audit=1[&path=list] — every core store vs every AGCO store (coverage report; no contact data)
+  if (q.audit) {
+    if (!sec.rateLimit('hq:audit', 6, 3600e3)) return sec.tooMany(res);
+    const db = stores.load();
+    const agco = []; for (const c of db.chains) for (const s of c.stores) agco.push({ ...s, chainName: c.name });
+    try {
+      const rows = await hq.all(q.path === 'list' ? 'list' : 'list-unclaimed');
+      return res.status(200).json({ path: q.path === 'list' ? 'list' : 'list-unclaimed', ...hq.audit(rows, agco) });
+    } catch (e) { return res.status(502).json({ error: e.message }); }
+  }
   const kw = String(q.q || '').slice(0, 80);
   if (kw.length < 2) return res.status(400).json({ error: 'Pass ?q= or ?store=' });
   // ?core=https://api.poof.ca/v1 — try another core base (poof.ca hosts only) without redeploying
