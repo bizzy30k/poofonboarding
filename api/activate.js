@@ -13,6 +13,7 @@
 //   -H "x-admin-key: $ADMIN_KEY" -H "Content-Type: application/json" \
 //   -d '{"customerId":"cus_123"}'
 const { stripeClient } = require('../lib/stripe');
+const promos = require('../lib/promo');
 const config = require('../lib/config');
 const record = require('../lib/record');
 const { findConflicts } = require('../lib/conflicts');
@@ -44,13 +45,21 @@ module.exports = async (req, res) => {
     const conflicts = guard.conflicts.filter(c => /live/i.test(c.stage));
     if (conflicts.length && !force) return res.status(409).json({ error: 'Some doors are already live on another account. Pass force:true to activate anyway.', conflicts });
 
-    let promo = null, promoSource = null;
-    const codes = [[String(typeof referralCode === 'string' ? referralCode : (rec.referral?.code || '')).toUpperCase().slice(0, 32), 'referral'], [rec.offer ? rec.offer.code : '', 'launch offer']];
-    for (const [code, src] of codes) {
-      if (!code) continue;
-      const list = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
-      if (list.data[0]) { promo = list.data[0]; promoSource = src; break; }
+    // Discount priority: the code they entered (or the one passed here) while it is active → the coupon
+    // locked onto the record at signup, if that code has since been switched off → the launch offer.
+    let promo = null, promoSource = null, lockedCoupon = null;
+    const refCode = promos.normCode(typeof referralCode === 'string' ? referralCode : (rec.referral?.code || ''));
+    promo = await promos.findActive(stripe, refCode);
+    if (promo) promoSource = 'referral';
+    if (!promo && rec.referral && rec.referral.couponId && refCode === rec.referral.code) {
+      const c = await stripe.coupons.retrieve(rec.referral.couponId).catch(() => null);
+      if (c && c.valid) { lockedCoupon = c.id; promoSource = 'referral (locked at signup)'; }
     }
+    if (!promo && !lockedCoupon && rec.offer) {
+      promo = await promos.findActive(stripe, rec.offer.code);
+      if (promo) promoSource = 'launch offer';
+    }
+    const promoCode = promo ? promo.code : lockedCoupon ? rec.referral.code : null;
 
     const existing = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 5 });
     const live = existing.data.find(s => ['active', 'trialing', 'past_due'].includes(s.status));
@@ -68,19 +77,19 @@ module.exports = async (req, res) => {
         default_payment_method: pm,
         collection_method: 'charge_automatically',
         automatic_tax: { enabled: true },
-        ...(promo ? { promotion_code: promo.id } : {}),
-        metadata: { poof_store_name: rec.store.chainName, poof_locations: ids.join(','), poof_activated_at: new Date().toISOString(), promo: promo ? `${promo.code} (${promoSource})` : '' },
+        ...(promo ? { promotion_code: promo.id } : lockedCoupon ? { discounts: [{ coupon: lockedCoupon }] } : {}),
+        metadata: { poof_store_name: rec.store.chainName, poof_locations: ids.join(','), poof_activated_at: new Date().toISOString(), promo: promoCode ? `${promoCode} (${promoSource})` : '' },
       });
     }
 
-    rec.activation = { at: new Date().toISOString(), subscription: sub.id, quantity: qty, locationIds: ids, promo: promo ? promo.code : null, promoSource };
+    rec.activation = { at: new Date().toISOString(), subscription: sub.id, quantity: qty, locationIds: ids, promo: promoCode, promoSource };
     await stripe.customers.update(customerId, { metadata: { ...record.pack(rec, record.chunksIn(customer.metadata)), onboarding_stage: 'Live', subscription: sub.id } });
 
     // Tell Poof HQ core the doors are live (core flips isActive on its side)
     const coreSync = await core.notifyCore({ ...rec, locations: rec.locations.filter(l => ids.includes(l.id)) }, { event: 'signup.activated', customerId, subscriptionId: sub.id, stage: 'live' });
     if (coreSync.error || coreSync.ok === false) console.warn('core sync (activate):', coreSync);
 
-    return res.status(200).json({ ok: true, coreSync, subscription: sub.id, status: sub.status, quantity: qty, monthly: qty * config.PRICE_CAD, promo: promo ? promo.code : null, promoSource, conflictsOverridden: conflicts });
+    return res.status(200).json({ ok: true, coreSync, subscription: sub.id, status: sub.status, quantity: qty, monthly: qty * config.PRICE_CAD, promo: promoCode, promoSource, conflictsOverridden: conflicts });
   } catch (e) {
     console.error('activate failed:', e);
     console.error('activate failed:', { err: e.message });

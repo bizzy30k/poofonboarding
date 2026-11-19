@@ -12,6 +12,10 @@ const record = require('../lib/record');
 const stores = require('../lib/stores');
 const sec = require('../lib/security');
 const hq = require('../lib/hq');
+const promo = require('../lib/promo');
+
+// Front doors that may tag a signup. Anything else is recorded as onboarding.poof.ca.
+const SOURCES = new Set(['signup.poof.ca']);
 
 
 function validate(b) {
@@ -32,7 +36,8 @@ function validate(b) {
     // Chips are a fixed list but 'Other' lets the retailer type their provider — accept any short string.
     systems: { pos: v.optStr(sys.pos, 60), processor: v.optStr(sys.processor, 60), ecommerce: v.optStr(sys.ecommerce, 60), delivery: sys.delivery == null ? null : !!sys.delivery, deliverySoftware: v.optStr(sys.deliverySoftware, 60) },
     owner: { name: v.str(owner.name, 120), email: v.email(owner.email), mobile: v.optStr(owner.mobile, 30) },
-    referral: b.referral ? { code: v.str(b.referral.code, 32) } : null,
+    referral: b.referral ? { code: v.str(promo.normCode(b.referral.code), 32) } : null,
+    source: SOURCES.has(b.source) ? b.source : '',
     customerId: b.customerId ? String(b.customerId) : null,
     session: b.session ? String(b.session) : null,
     turnstile: typeof b.turnstile === 'string' ? b.turnstile : null,
@@ -69,8 +74,18 @@ module.exports = async (req, res) => {
     const hqMap = await hq.matchAll(locs.map(l => ({ ...l, chainName: b.store.chainName }))).catch(() => ({}));
     const hqMeta = hq.stripeMeta(hqMap);
     const entryHq = hqMap[b.entryStoreId] || hqMap[locs[0].id];
-    const description = `Poof retailer — ${b.store.chainName} (${locs.length})${entryHq ? ` · hq:${entryHq.id}` : ''}`;
-    const rec = { store: b.store, entryStoreId: b.entryStoreId, locations: locs, groups, systems: b.systems, owner: b.owner, referral: b.referral, acceptance: null, hq: hqMap };
+    const description = `Poof retailer — ${b.store.chainName} (${locs.length})${entryHq ? ` · hq:${entryHq.id}` : ''}${b.source ? ` · via ${b.source}` : ''}`;
+    // Lock the discount onto the record while the code is active, so it still applies at go-live if the
+    // code is switched off in between (lib/promo.js). An unknown code is kept as typed, as before.
+    let referral = b.referral;
+    if (referral) {
+      const p = await promo.findActive(stripe, referral.code).catch(() => null);
+      if (p) referral = promo.lock(p);
+    }
+    const rec = { store: b.store, entryStoreId: b.entryStoreId, locations: locs, groups, systems: b.systems, owner: b.owner, referral, acceptance: null, hq: hqMap };
+    if (b.source) rec.source = b.source;
+    // A lock from an earlier pass of the same signup stands if the code has since gone inactive.
+    const keepLock = (prevRec) => { const r = prevRec && prevRec.referral; if (rec.referral && !rec.referral.couponId && r && r.couponId && r.code === rec.referral.code) rec.referral = r; };
 
     let customer;
     if (b.customerId) {
@@ -80,6 +95,7 @@ module.exports = async (req, res) => {
       if (!prev || prev.deleted) return res.status(404).json({ error: 'Signup not found. Please reload the page.' });
       const prevRec = record.unpack(prev.metadata || {});
       if (prevRec && prevRec.acceptance && prevRec.acceptance.at) return res.status(409).json({ error: 'This signup is already complete.' });
+      keepLock(prevRec);
       customer = await stripe.customers.update(b.customerId, {
         name: b.store.chainName, email: b.owner.email, phone: b.owner.mobile || undefined, description,
         metadata: { ...record.pack(rec, record.chunksIn(prev.metadata)), ...hqMeta },
@@ -97,6 +113,7 @@ module.exports = async (req, res) => {
       }
       const reuse = existing[0];
       if (reuse) {
+        keepLock(record.unpack(reuse.metadata || {}));
         customer = await stripe.customers.update(reuse.id, {
           name: b.store.chainName, email: b.owner.email, phone: b.owner.mobile || undefined,
           description,
@@ -125,7 +142,7 @@ module.exports = async (req, res) => {
     });
 
     res.setHeader('Cache-Control', 'private, no-store');
-    return res.status(200).json({ clientSecret: si.client_secret, customerId: customer.id, setupIntentId: si.id, session: sec.sessionToken(customer.id), locations: locs });
+    return res.status(200).json({ clientSecret: si.client_secret, customerId: customer.id, setupIntentId: si.id, session: sec.sessionToken(customer.id), locations: locs, referral: rec.referral ? { code: rec.referral.code, description: rec.referral.description || '', months: rec.referral.months || null } : null });
   } catch (err) {
     console.error('setup-intent failed:', { ip, err: err.message });
     return res.status(500).json({ error: 'Could not start the payment step.' });
