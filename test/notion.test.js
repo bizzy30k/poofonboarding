@@ -26,15 +26,19 @@ test('signup updates existing rows, adds a missing one, queues three tasks', asy
   assert.equal(patch.Stage.select.name, 'Signed up'); assert.equal(patch.Source.select.name, 'signup.poof.ca');
   assert.equal(patch.POS.select.name, 'Greenline'); assert.equal(patch.Processor.select.name, 'Other');
   assert.equal(patch['Owner Email'].email, 'dana@store.ca'); assert.equal(patch['Discount Code'].rich_text[0].text.content, 'POOF180');
-  assert.match(patch.Notes.rich_text[0].text.content, /old note\nProcessor: Helcim · Delivery: yes \(Canfleet\) · Signed 2026-11-23 by Dana Lee/);
+  assert.match(patch.Notes.rich_text[0].text.content, /old note\nProcessor: Helcim · Delivery: yes \(Canfleet, connects through Breadstack\) · Signed 2026-11-23 by Dana Lee/);
   const created = calls.filter(c => c.method === 'POST' && c.url.endsWith('/pages'));
   assert.equal(created[0].body.properties.Licence.rich_text[0].text.content, 'CRSA2222222');
   const tasks = created.slice(1).map(c => c.body);
   assert.deepEqual(tasks.map(t => t.properties.Type.select.name), ['Send next-steps email', 'Request POS credentials', 'Request processor credentials']);
-  assert.deepEqual(tasks.map(t => t.properties.Status.status.name), ['Needs approval', 'Needs approval', 'To do']);
+  assert.deepEqual(tasks.map(t => t.properties.Status.status.name), ['Needs approval', 'Needs approval', 'Needs approval']);
   assert.equal(tasks[0].properties.Store.relation.length, 2); assert.equal(tasks[0].properties.Assignee.select.name, 'Lily');
   assert.ok(tasks[1].children.some(b => b.paragraph && b.paragraph.rich_text[0] && /Company ID/.test(b.paragraph.rich_text[0].text.content)));
-  assert.equal(tasks[2].children.length, 0, 'no draft where there is no template');
+  const bodyOf = t => t.children.map(b => b.paragraph ? (b.paragraph.rich_text[0] || { text: { content: '' } }).text.content : '').join('\n');
+  assert.match(bodyOf(tasks[2]), /You told us you use Helcim as your payment processor\. We're working on setting up this integration\. Please connect us with your representative to speed up the process\./);
+  assert.match(bodyOf(tasks[0]), /our team contacts Greenline to set up the connection/);
+  assert.match(bodyOf(tasks[0]), /For Helcim: We're working on setting up this integration/);
+  assert.match(bodyOf(tasks[0]), /Canfleet delivery connects through Breadstack/);
 });
 test('a second sync of the same signup does not duplicate tasks', async () => {
   calls.length = 0; rows = { CRSA1111111: row('1', 'Signed up', 'cus_1'), CRSA2222222: row('2', 'Signed up', 'cus_1') };
