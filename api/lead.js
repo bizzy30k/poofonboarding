@@ -65,8 +65,19 @@ module.exports = async (req, res) => {
       resumeUrl = `${config.SITE_URL}/r/${config.encodeResume(slim)}`;
     }
 
+    // signup.poof.ca is one page, so its resume link is just the page with the store and code filled in.
+    // No personal data travels in the link.
+    const fromSignup = b.source === 'signup.poof.ca';
+    if (fromSignup && stage !== 'completed' && stage !== 'waitlist') {
+      const q = [];
+      if (entryStoreId) q.push('store=' + entryStoreId);
+      const code = st && st.referral && /^[A-Za-z0-9_-]{2,32}$/.test(st.referral.code || '') ? String(st.referral.code).toUpperCase() : '';
+      if (code) q.push('code=' + code);
+      resumeUrl = 'https://signup.poof.ca/' + (q.length ? '?' + q.join('&') : '');
+    }
+
     const first = name.split(' ')[0] || '';
-    const props = { stage, store: storeName, chain: chain ? chain.slug : '', entry_store: entryStoreId, locations: (st && Array.isArray(st.selected) ? st.selected.length : 0), resume_url: resumeUrl, first_name: first };
+    const props = { stage, store: storeName, chain: chain ? chain.slug : '', entry_store: entryStoreId, locations: (st && Array.isArray(st.selected) ? st.selected.length : 0), resume_url: resumeUrl, first_name: first, source: fromSignup ? 'signup.poof.ca' : 'onboarding.poof.ca' };
     const out = {};
     const profileProps = stage === 'completed' ? { pos_connected: true, pos_completed_at: new Date().toISOString() }
       : stage === 'waitlist' ? { waitlisted: true }
