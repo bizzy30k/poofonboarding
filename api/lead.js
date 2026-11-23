@@ -10,9 +10,28 @@ const config = require('../lib/config');
 const sec = require('../lib/security');
 const stores = require('../lib/stores');
 const { internalEmail } = require('../lib/mail');
-const { track: klaviyo } = require('../lib/klaviyo');
+const { track: klaviyo, subscribe: klaviyoSubscribe } = require('../lib/klaviyo');
 
 const STAGES = ['started', 'locations', 'systems', 'review', 'agreement', 'completed', 'waitlist'];
+
+// Everything the "You're in" confirmation email shows. Read by the Klaviyo template as {{ event.x }}.
+const LIVE = { pos: new Set(['cova', 'greenline']), processor: new Set(['merrco', 'moneris']) };
+function confirmationProps(rec, customerId) {
+  const pos = (rec.systems && rec.systems.pos) || '', proc = (rec.systems && rec.systems.processor) || '';
+  const live = [LIVE.pos.has(pos.toLowerCase()) ? pos : null, LIVE.processor.has(proc.toLowerCase()) ? proc : null].filter(Boolean);
+  const pending = [pos && !LIVE.pos.has(pos.toLowerCase()) ? pos : null, proc && !LIVE.processor.has(proc.toLowerCase()) ? proc : null].filter(Boolean);
+  const ref = rec.referral || null, n = rec.locations.length;
+  const until = ref && ref.until ? new Date(ref.until + 'T12:00:00Z').toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }) : '';
+  return {
+    order_form_url: `${config.SITE_URL}/api/orderform?c=${customerId}&t=${config.orderFormToken(customerId)}`,
+    store: rec.store.chainName, locations: n, location_list: rec.locations.slice(0, 40).map(l => `${l.addr}, ${l.city}`),
+    monthly_total: n * config.PRICE_CAD, price_per_location: config.PRICE_CAD,
+    pos, processor: proc, live_integrations: live.join(' and '), pending_integrations: pending.join(' and '),
+    free_period: ref && ref.days ? `${ref.days} days` : ref && ref.months ? `${ref.months} months` : '',
+    free_until: until, discount_code: ref ? ref.code : '',
+    signed_by: (rec.acceptance && rec.acceptance.name) || '', terms_url: config.TERMS_URL,
+  };
+}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -76,8 +95,19 @@ module.exports = async (req, res) => {
       resumeUrl = 'https://signup.poof.ca/' + (q.length ? '?' + q.join('&') : '');
     }
 
+    // A completed signup: load the signed record once. It feeds the confirmation email and the Notion sync.
+    let rec = null;
+    if (stage === 'completed') {
+      try {
+        const { stripeClient } = require('../lib/stripe');
+        const customer = await stripeClient().customers.retrieve(b.customerId);
+        const r = require('../lib/record').unpack(customer.metadata || {});
+        if (r && r.acceptance) rec = r;
+      } catch (e) { console.error('lead: could not load the signed record', { customerId: b.customerId, err: e.message }); }
+    }
     const first = name.split(' ')[0] || '';
     const props = { stage, store: storeName, chain: chain ? chain.slug : '', entry_store: entryStoreId, locations: (st && Array.isArray(st.selected) ? st.selected.length : 0), resume_url: resumeUrl, first_name: first, source: fromSignup ? 'signup.poof.ca' : 'onboarding.poof.ca' };
+    if (rec) Object.assign(props, confirmationProps(rec, b.customerId));
     const out = {};
     const profileProps = stage === 'completed' ? { pos_connected: true, pos_completed_at: new Date().toISOString() }
       : stage === 'waitlist' ? { waitlisted: true }
@@ -92,17 +122,16 @@ module.exports = async (req, res) => {
     }
     // A finished signup goes into the Notion data room: store rows updated, first tasks queued for approval.
     // The retailer is already on the "You're in" screen, so this never slows them down.
-    if (stage === 'completed') {
+    if (rec) {
       try {
-        const { stripeClient } = require('../lib/stripe');
-        const record = require('../lib/record');
-        const customer = await stripeClient().customers.retrieve(b.customerId);
-        const rec = record.unpack(customer.metadata || {});
-        if (rec && rec.acceptance) {
-          out.notion = await require('../lib/notion').syncSignup(rec, b.customerId);
-          if (out.notion.errors && out.notion.errors.length) console.error('lead: notion sync had errors', { customerId: b.customerId, errors: out.notion.errors.slice(0, 5) });
-        }
+        out.notion = await require('../lib/notion').syncSignup(rec, b.customerId);
+        if (out.notion.errors && out.notion.errors.length) console.error('lead: notion sync had errors', { customerId: b.customerId, errors: out.notion.errors.slice(0, 5) });
       } catch (e) { console.error('lead: notion sync failed', { customerId: b.customerId, err: e.message }); }
+    }
+    // Ticked "email me updates": record the opt-in. Unticked means nothing is subscribed.
+    if (b.marketing === true && (stage === 'started' || stage === 'completed')) {
+      out.optin = await klaviyoSubscribe(email, fromSignup ? 'signup.poof.ca' : 'onboarding.poof.ca').catch(e => ({ error: e.message }));
+      if (out.optin && (out.optin.error || out.optin.ok === false)) console.error('lead: opt-in not recorded', { stage, optin: out.optin });
     }
     if (out.klaviyo && out.klaviyo.error) console.error('lead: klaviyo failed', { stage, err: out.klaviyo.error });
     if (out.internal && out.internal.error) console.error('lead: internal email failed', { stage, err: out.internal.error });
