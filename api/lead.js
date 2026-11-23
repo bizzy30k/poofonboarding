@@ -90,6 +90,20 @@ module.exports = async (req, res) => {
         Email: email, Name: name, Store: storeName, Chain: chain ? chain.slug : '', 'Entry store': entryStoreId, Note: sec.v.optStr(b.note, 500) || '', 'Resume link': resumeUrl || '',
       }).catch(e => ({ error: e.message }));
     }
+    // A finished signup goes into the Notion data room: store rows updated, first tasks queued for approval.
+    // The retailer is already on the "You're in" screen, so this never slows them down.
+    if (stage === 'completed') {
+      try {
+        const { stripeClient } = require('../lib/stripe');
+        const record = require('../lib/record');
+        const customer = await stripeClient().customers.retrieve(b.customerId);
+        const rec = record.unpack(customer.metadata || {});
+        if (rec && rec.acceptance) {
+          out.notion = await require('../lib/notion').syncSignup(rec, b.customerId);
+          if (out.notion.errors && out.notion.errors.length) console.error('lead: notion sync had errors', { customerId: b.customerId, errors: out.notion.errors.slice(0, 5) });
+        }
+      } catch (e) { console.error('lead: notion sync failed', { customerId: b.customerId, err: e.message }); }
+    }
     if (out.klaviyo && out.klaviyo.error) console.error('lead: klaviyo failed', { stage, err: out.klaviyo.error });
     if (out.internal && out.internal.error) console.error('lead: internal email failed', { stage, err: out.internal.error });
     return res.status(200).json({ ok: true, resumeUrl });
