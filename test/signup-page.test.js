@@ -91,7 +91,7 @@ test('promo: "POOF 180" validates and reports 6 months free', async () => {
 
 test('one-page signup: record, discount lock, acceptance and email all land', async () => {
   const s = await signUp('dana@store.ca', 'poof 180');
-  assert.deepEqual(s.referral, { code: 'POOF180', description: '6 months free', months: 6 });
+  assert.deepEqual(s.referral, { code: 'POOF180', description: '6 months free', months: 6, days: null, until: null });
   const c = db.customers.get(s.customerId);
   const rec = record.unpack(c.metadata);
   assert.equal(rec.referral.couponId, 'coup_6mo');
@@ -144,4 +144,51 @@ test('grouped picker: a second banner and a named group are stored', async () =>
   assert.deepEqual(rec.store.extra, ['1-stop-cannabis']);
   assert.equal(rec.groups[0].name, 'Windsor-Essex');
   assert.equal(db.customers.get(r.body.customerId).metadata.groups, 'Windsor-Essex:2');
+});
+
+// ---- POOF180-style code: fixed free period from go-live with a hard end date ----
+const ymd = (ms) => new Date(ms).toISOString().slice(0, 10);
+const withTerms = async (until, fn) => {
+  const saved = COUPON.metadata; COUPON.metadata = { free_days: '180', ...(until ? { free_until: until } : {}) };
+  try { await fn(); } finally { COUPON.metadata = saved; }
+};
+
+test('free period: code check reports 180 days and the end date', async () => {
+  await withTerms('2027-06-30', async () => {
+    const r = await call(promoApi, { method: 'GET', query: { code: 'POOF 180' } });
+    assert.equal(r.body.description, '180 days free');
+    assert.equal(r.body.days, 180); assert.equal(r.body.until, '2027-06-30'); assert.equal(r.body.months, null);
+  });
+});
+
+test('free period: go-live well before the end date gets the full 180 days as a trial, no coupon', async () => {
+  await withTerms(ymd(Date.now() + 400 * 86400e3), async () => {
+    const s = await signUp('days@store.ca', 'POOF180', { chain: 'take-off-cannabis', name: 'Take Off Cannabis', id: 'CRSA1574722' });
+    db.subs.length = 0;
+    const r = await call(activate, { body: { customerId: s.customerId }, headers: { 'x-admin-key': 'admin-test-key' } });
+    assert.equal(r.code, 200, JSON.stringify(r.body));
+    const want = Math.floor((Date.now() + 180 * 86400e3) / 1000);
+    assert.ok(Math.abs(db.subs[0].trial_end - want) < 120, 'trial ends 180 days out');
+    assert.equal(db.subs[0].promotion_code, undefined); assert.equal(db.subs[0].discounts, undefined);
+    assert.equal(r.body.promo, 'POOF180'); assert.ok(r.body.freeUntil);
+  });
+});
+
+test('free period: go-live close to the end date is capped at that date, even if the code is off by then', async () => {
+  const until = ymd(Date.now() + 30 * 86400e3);
+  await withTerms(until, async () => {
+    const s = await signUp('cap@store.ca', 'POOF180', { chain: 'shiny-vapes-cannabis', name: 'Shiny Vapes & Cannabis', id: 'CRSA1509400' });
+    db.promoActive = false; db.subs.length = 0;
+    const r = await call(activate, { body: { customerId: s.customerId }, headers: { 'x-admin-key': 'admin-test-key' } });
+    db.promoActive = true;
+    assert.equal(r.code, 200, JSON.stringify(r.body));
+    assert.equal(db.subs[0].trial_end, Math.floor(Date.parse(until + 'T23:59:59-05:00') / 1000));
+    assert.equal(db.subs[0].discounts, undefined, 'the locked coupon is not stacked on the trial');
+    assert.match(r.body.promoSource, /locked/);
+  });
+});
+
+test('free period: a store that goes live after the end date pays from day one', () => {
+  assert.equal(promo.trialEnd({ days: 180, until: '2020-01-01' }), null);
+  assert.equal(promo.longDate('2027-06-30'), 'June 30, 2027');
 });

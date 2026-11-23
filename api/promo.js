@@ -14,7 +14,8 @@ module.exports = async (req, res) => {
   try {
     const p = await promo.findActive(stripeClient(), code);
     if (!p) return res.status(200).json({ valid: false, code });
-    return res.status(200).json({ valid: true, code: p.code, description: promo.describe(p.coupon), months: promo.freeMonths(p.coupon), promotionCodeId: p.id });
+    const t = promo.freeTerms(p.coupon);
+    return res.status(200).json({ valid: true, code: p.code, description: promo.describe(p.coupon), months: t ? null : promo.freeMonths(p.coupon), days: t ? t.days : null, until: t ? t.until : null, promotionCodeId: p.id });
   } catch (e) {
     return res.status(200).json({ valid: false, code, error: 'Could not check the code right now.' });
   }

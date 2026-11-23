@@ -142,7 +142,7 @@ module.exports = async (req, res) => {
     });
 
     res.setHeader('Cache-Control', 'private, no-store');
-    return res.status(200).json({ clientSecret: si.client_secret, customerId: customer.id, setupIntentId: si.id, session: sec.sessionToken(customer.id), locations: locs, referral: rec.referral ? { code: rec.referral.code, description: rec.referral.description || '', months: rec.referral.months || null } : null });
+    return res.status(200).json({ clientSecret: si.client_secret, customerId: customer.id, setupIntentId: si.id, session: sec.sessionToken(customer.id), locations: locs, referral: rec.referral ? { code: rec.referral.code, description: rec.referral.description || '', months: rec.referral.months || null, days: rec.referral.days || null, until: rec.referral.until || null } : null });
   } catch (err) {
     console.error('setup-intent failed:', { ip, err: err.message });
     return res.status(500).json({ error: 'Could not start the payment step.' });
