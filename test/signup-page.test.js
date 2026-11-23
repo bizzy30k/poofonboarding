@@ -131,3 +131,17 @@ test('second signup under the same email is refused with a clear message', async
   assert.equal(r.code, 409);
   assert.equal(r.body.code, 'email_exists');
 });
+
+test('grouped picker: a second banner and a named group are stored', async () => {
+  const b = pageBody('group@store.ca', null);
+  b.store.extra = ['1-stop-cannabis']; b.entryStoreId = null;
+  b.locations = ['CRSA1537578', 'CRSA1250792'];
+  b.groups = [{ name: 'Windsor-Essex', ids: ['CRSA1537578', 'CRSA1250792'] }];
+  const r = await call(setupIntent, { body: b });
+  assert.equal(r.code, 200, JSON.stringify(r.body));
+  const rec = record.unpack(db.customers.get(r.body.customerId).metadata);
+  assert.equal(rec.locations.length, 2);
+  assert.deepEqual(rec.store.extra, ['1-stop-cannabis']);
+  assert.equal(rec.groups[0].name, 'Windsor-Essex');
+  assert.equal(db.customers.get(r.body.customerId).metadata.groups, 'Windsor-Essex:2');
+});
