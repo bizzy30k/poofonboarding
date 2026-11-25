@@ -10,7 +10,11 @@ module.exports = async (req, res) => {
   try {
     const out = await notion.sweepDropoffs();
     if (out.errors && out.errors.length) console.error('cron-dropoffs: errors', out.errors.slice(0, 5));
-    return res.status(200).json({ ok: true, due: out.due || 0, tasks: out.tasks || 0, skipped: out.skipped });
+    // Same daily run: locations follow their account's column on the pipeline board.
+    let stages = {};
+    try { stages = await notion.syncStages(); if (stages.errors && stages.errors.length) console.error('cron-dropoffs: stage sync errors', stages.errors.slice(0, 5)); }
+    catch (e) { console.error('cron-dropoffs: stage sync failed', e.message); }
+    return res.status(200).json({ ok: true, due: out.due || 0, tasks: out.tasks || 0, skipped: out.skipped, stageSync: { accounts: stages.accounts || 0, stores: stages.stores || 0 } });
   } catch (e) {
     console.error('cron-dropoffs failed', e.message);
     return res.status(200).json({ ok: false });
