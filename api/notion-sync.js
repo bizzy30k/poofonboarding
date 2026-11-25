@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
     if (!sec.rateLimit(`notion:check:${sec.clientIp(req)}`, 6, 60e3)) return sec.tooMany(res);
     const c = await notion.check().catch(e => ({ ok: false, reason: e.message }));
     if (c.reason) return res.status(200).json({ ok: false, token: 'missing' });
-    return res.status(200).json({ ok: c.ok, token: 'set', stores: reason(c.stores), tasks: reason(c.tasks) });
+    return res.status(200).json({ ok: c.ok, token: 'set', stores: reason(c.stores), tasks: reason(c.tasks), accounts: reason(c.accounts) });
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!sec.requireAdmin(req, res)) return;
@@ -26,7 +26,10 @@ module.exports = async (req, res) => {
     const customer = await stripeClient().customers.retrieve(customerId);
     const rec = record.unpack(customer.metadata || {});
     if (!rec || !rec.acceptance) return res.status(409).json({ error: 'That signup is not signed yet.' });
-    return res.status(200).json(await notion.syncSignup(rec, customerId));
+    const { buildOrderForm } = require('../lib/orderform');
+    const config = require('../lib/config');
+    const pdf = await buildOrderForm(rec).catch(() => null);
+    return res.status(200).json(await notion.syncSignup(rec, customerId, { pdf, orderFormUrl: `${config.SITE_URL}/api/orderform?c=${customerId}&t=${config.orderFormToken(customerId, 3650)}` }));
   } catch (e) {
     console.error('notion-sync failed', e.message);
     return res.status(500).json({ error: 'Sync failed.' });

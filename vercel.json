@@ -59,5 +59,11 @@
     "api/*.js": {
       "maxDuration": 30
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron-dropoffs",
+      "schedule": "0 14 * * *"
+    }
+  ]
 }

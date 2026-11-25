@@ -124,7 +124,8 @@ module.exports = async (req, res) => {
     // The retailer is already on the "You're in" screen, so this never slows them down.
     if (rec) {
       try {
-        out.notion = await require('../lib/notion').syncSignup(rec, b.customerId);
+        const pdf = await require('../lib/orderform').buildOrderForm(rec).catch(() => null);
+        out.notion = await require('../lib/notion').syncSignup(rec, b.customerId, { pdf, orderFormUrl: `${config.SITE_URL}/api/orderform?c=${b.customerId}&t=${config.orderFormToken(b.customerId, 3650)}` });
         if (out.notion.errors && out.notion.errors.length) console.error('lead: notion sync had errors', { customerId: b.customerId, errors: out.notion.errors.slice(0, 5) });
       } catch (e) { console.error('lead: notion sync failed', { customerId: b.customerId, err: e.message }); }
     }
@@ -135,7 +136,13 @@ module.exports = async (req, res) => {
     }
     if (out.klaviyo && out.klaviyo.error) console.error('lead: klaviyo failed', { stage, err: out.klaviyo.error });
     if (out.internal && out.internal.error) console.error('lead: internal email failed', { stage, err: out.internal.error });
-    return res.status(200).json({ ok: true, resumeUrl });
+    // The store row moves to "Started signup" once a store is picked. Only for an email that passed the
+    // bot check on its first call (the token below), so nobody can flip rows by posting store ids.
+    if (stage === 'locations' && entryStoreId && b.lt && config.verify(email, String(b.lt), 'lead')) {
+      out.started = await require('../lib/notion').markStarted(entryStoreId, { email, name, source: fromSignup ? 'signup.poof.ca' : 'onboarding.poof.ca' }).catch(e => ({ error: e.message }));
+      if (out.started && out.started.error) console.error('lead: could not mark the store as started', { err: out.started.error });
+    }
+    return res.status(200).json({ ok: true, resumeUrl, ...(stage === 'started' ? { lt: config.sign(email, 'lead') } : {}) });
   } catch (e) {
     console.error('lead failed:', { ip, err: e.message });
     return res.status(200).json({ ok: false }); // never block the flow on this
