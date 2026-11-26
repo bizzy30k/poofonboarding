@@ -118,6 +118,10 @@ module.exports = async (req, res) => {
     const url = orderFormUrl(customerId);
     let mail = {};
     try { const pdf = await buildOrderForm(rec); mail = await sendSignupEmails(rec, pdf, url); } catch (e) { mail = { error: e.message }; console.error('accept: mail failed', { customerId, err: e.message }); }
+    // Record what the mail provider said, so a missing email can be diagnosed after the logs are gone.
+    const mailNote = m => !m ? 'not attempted' : m.id ? `sent ${m.via || ''} ${m.id === true ? '' : m.id}`.trim() : m.error ? `FAILED ${m.error}` : m.skipped ? `skipped ${m.skipped}` : 'unknown';
+    try { await stripe.customers.update(customerId, { metadata: { mail_retailer: (mail.error ? `FAILED ${mail.error}` : mailNote(mail.retailer)).slice(0, 480), mail_internal: mailNote(mail.internal).slice(0, 480), mail_at: new Date().toISOString() } }); }
+    catch (e) { console.warn('accept: could not record mail status', e.message); }
     const coreSync = await core.notifyCore(rec, { event: 'signup.accepted', customerId, orderFormUrl: url, stage: 'accepted' });
     if (coreSync.error || coreSync.ok === false) console.warn('accept: core sync failed', { customerId, coreSync });
 
