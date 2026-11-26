@@ -59,10 +59,13 @@ const pageBody = (email, code, st = { chain: 'sessions-cannabis', name: 'Session
   owner: { name: 'Dana Lee', email, mobile: '' }, referral: code ? { code } : null,
   source: 'signup.poof.ca', turnstile: null,
 });
-const signUp = async (email, code, st) => {
+const cfg = require('../lib/config');
+// The code-based tests below cover the discount-code machinery, which signup.poof.ca only uses when the tiered offer is off.
+const signUpWithCode = async (...a) => { cfg.SIGNUP_OFFER.enabled = false; try { return await signUp(...a); } finally { cfg.SIGNUP_OFFER.enabled = true; } };
+const signUp = async (email, code, st, skipCard) => {
   const si = await call(setupIntent, { body: pageBody(email, code, st) });
   assert.equal(si.code, 200, JSON.stringify(si.body));
-  const acc = await call(accept, { body: { customerId: si.body.customerId, session: si.body.session, setupIntentId: si.body.setupIntentId, cardSkipped: false, acceptance: { name: 'Dana Lee', title: 'Owner', agreed: true, authorised: true } } });
+  const acc = await call(accept, { body: { customerId: si.body.customerId, session: si.body.session, ...(skipCard ? { cardSkipped: true } : { setupIntentId: si.body.setupIntentId, cardSkipped: false }), acceptance: { name: 'Dana Lee', title: 'Owner', agreed: true, authorised: true } } });
   assert.equal(acc.code, 200, JSON.stringify(acc.body));
   return si.body;
 };
@@ -90,7 +93,7 @@ test('promo: "POOF 180" validates and reports 6 months free', async () => {
 });
 
 test('one-page signup: record, discount lock, acceptance and email all land', async () => {
-  const s = await signUp('dana@store.ca', 'poof 180');
+  const s = await signUpWithCode('dana@store.ca', 'poof 180');
   assert.deepEqual(s.referral, { code: 'POOF180', description: '6 months free', months: 6, days: null, until: null });
   const c = db.customers.get(s.customerId);
   const rec = record.unpack(c.metadata);
@@ -106,7 +109,7 @@ test('one-page signup: record, discount lock, acceptance and email all land', as
 });
 
 test('activation: active code is applied as a promotion code', async () => {
-  const s = await signUp('active@store.ca', 'POOF180');
+  const s = await signUpWithCode('active@store.ca', 'POOF180');
   db.subs.length = 0;
   const r = await call(activate, { body: { customerId: s.customerId }, headers: { 'x-admin-key': 'admin-test-key' } });
   assert.equal(r.code, 200, JSON.stringify(r.body));
@@ -115,7 +118,7 @@ test('activation: active code is applied as a promotion code', async () => {
 });
 
 test('activation: code switched off after the webinar still gives the locked 6 months', async () => {
-  const s = await signUp('later@store.ca', 'POOF180', { chain: '1-stop-cannabis', name: '1 Stop Cannabis', id: 'CRSA1250792' });
+  const s = await signUpWithCode('later@store.ca', 'POOF180', { chain: '1-stop-cannabis', name: '1 Stop Cannabis', id: 'CRSA1250792' });
   db.promoActive = false; db.subs.length = 0;
   const r = await call(activate, { body: { customerId: s.customerId }, headers: { 'x-admin-key': 'admin-test-key' } });
   db.promoActive = true;
@@ -163,7 +166,7 @@ test('free period: code check reports 180 days and the end date', async () => {
 
 test('free period: go-live well before the end date gets the full 180 days as a trial, no coupon', async () => {
   await withTerms(ymd(Date.now() + 400 * 86400e3), async () => {
-    const s = await signUp('days@store.ca', 'POOF180', { chain: 'take-off-cannabis', name: 'Take Off Cannabis', id: 'CRSA1574722' });
+    const s = await signUpWithCode('days@store.ca', 'POOF180', { chain: 'take-off-cannabis', name: 'Take Off Cannabis', id: 'CRSA1574722' });
     db.subs.length = 0;
     const r = await call(activate, { body: { customerId: s.customerId }, headers: { 'x-admin-key': 'admin-test-key' } });
     assert.equal(r.code, 200, JSON.stringify(r.body));
@@ -177,7 +180,7 @@ test('free period: go-live well before the end date gets the full 180 days as a 
 test('free period: go-live close to the end date is capped at that date, even if the code is off by then', async () => {
   const until = ymd(Date.now() + 30 * 86400e3);
   await withTerms(until, async () => {
-    const s = await signUp('cap@store.ca', 'POOF180', { chain: 'shiny-vapes-cannabis', name: 'Shiny Vapes & Cannabis', id: 'CRSA1509400' });
+    const s = await signUpWithCode('cap@store.ca', 'POOF180', { chain: 'shiny-vapes-cannabis', name: 'Shiny Vapes & Cannabis', id: 'CRSA1509400' });
     db.promoActive = false; db.subs.length = 0;
     const r = await call(activate, { body: { customerId: s.customerId }, headers: { 'x-admin-key': 'admin-test-key' } });
     db.promoActive = true;
@@ -191,4 +194,41 @@ test('free period: go-live close to the end date is capped at that date, even if
 test('free period: a store that goes live after the end date pays from day one', () => {
   assert.equal(promo.trialEnd({ days: 180, until: '2020-01-01' }), null);
   assert.equal(promo.longDate('2027-06-30'), 'June 30, 2027');
+});
+
+// ---- signup.poof.ca offer (2026-11-26): card at signup = free until June 30, 2027; no card = free until March 31, 2027 ----
+const offers = require('../lib/offer');
+const admin = { 'x-admin-key': 'admin-test-key' };
+test('tiered offer: a card at signup is free until June 30, 2027, and a typed code changes nothing', async () => {
+  const s = await signUp('card@tier.ca', 'POOF180', { chain: "blyth-cannabis", name: "Blyth Cannabis", id: "CRSA1502480" });
+  const rec = record.unpack(db.customers.get(s.customerId).metadata);
+  assert.deepEqual({ tier: rec.offer.tier, until: rec.offer.until, months: rec.offer.months }, { tier: 'card', until: '2027-06-30', months: 6 });
+  assert.equal(rec.referral, null, 'no code is needed, and a code does not stack');
+  assert.match(offers.lines(rec.offer).headline, /No charge until June 30, 2027/);
+  assert.match(offers.lines(rec.offer).billingStarts, /^July 1, 2027/);
+  db.subs.length = 0;
+  const r = await call(activate, { body: { customerId: s.customerId }, headers: admin });
+  assert.equal(r.code, 200, JSON.stringify(r.body));
+  assert.equal(db.subs[0].trial_end, Math.floor(Date.parse('2027-06-30T23:59:59-05:00') / 1000));
+  assert.equal(db.subs[0].default_payment_method, 'pm_x'); assert.equal(db.subs[0].promotion_code, undefined); assert.equal(db.subs[0].discounts, undefined);
+});
+test('tiered offer: no card at signup is free until March 31, 2027 and can still go live inside that window', async () => {
+  const s = await signUp('nocard@tier.ca', null, { chain: "bongbaba-cannabis-culture", name: "Bongbaba Cannabis Culture", id: "CRSA1210605" }, true);
+  const c = db.customers.get(s.customerId), rec = record.unpack(c.metadata);
+  assert.deepEqual({ tier: rec.offer.tier, until: rec.offer.until, skipped: rec.cardSkipped }, { tier: 'nocard', until: '2027-03-31', skipped: true });
+  assert.match(c.metadata.card_on_file, /^no/);
+  assert.match(offers.lines(rec.offer).detail, /A card must be added before March 31, 2027/);
+  db.subs.length = 0;
+  const r = await call(activate, { body: { customerId: s.customerId }, headers: admin });
+  assert.equal(r.code, 200, JSON.stringify(r.body));
+  assert.equal(db.subs[0].trial_end, Math.floor(Date.parse('2027-03-31T23:59:59-05:00') / 1000));
+  assert.equal(db.subs[0].default_payment_method, undefined);
+  assert.deepEqual(db.subs[0].trial_settings, { end_behavior: { missing_payment_method: 'pause' } });
+});
+test('tiered offer: once the free period has passed, a store with no card cannot be switched on', async () => {
+  const s = await signUp('late@tier.ca', null, { chain: "borderland-cannabis", name: "Borderland Cannabis", id: "CRSA1195753" }, true);
+  const c = db.customers.get(s.customerId), rec = record.unpack(c.metadata);
+  rec.offer.until = '2026-01-31'; Object.assign(c.metadata, record.pack(rec, record.chunksIn(c.metadata)));
+  const r = await call(activate, { body: { customerId: s.customerId }, headers: admin });
+  assert.equal(r.code, 400); assert.match(r.body.error, /free period has ended/);
 });

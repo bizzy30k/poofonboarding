@@ -14,6 +14,7 @@
 //   -d '{"customerId":"cus_123"}'
 const { stripeClient } = require('../lib/stripe');
 const promos = require('../lib/promo');
+const offers = require('../lib/offer');
 const config = require('../lib/config');
 const record = require('../lib/record');
 const { findConflicts } = require('../lib/conflicts');
@@ -33,7 +34,10 @@ module.exports = async (req, res) => {
     const rec = record.unpack(customer.metadata || {});
     if (!rec || !rec.acceptance?.at) return res.status(400).json({ error: 'No accepted agreement on this customer.' });
     const pm = customer.invoice_settings?.default_payment_method;
-    if (!pm) return res.status(400).json({ error: 'No card on file. Collect it (Stripe → customer → add payment method → set as default) and run again.' });
+    const tier = offers.isTier(rec.offer) ? rec.offer : null;
+    // A store that signed up without a card can still go live inside its free period; everyone else needs a card.
+    const tierEnd = tier ? offers.trialEnd(tier) : null;
+    if (!pm && !(tier && tier.tier === 'nocard' && tierEnd)) return res.status(400).json({ error: tier ? 'No card on file and the free period has ended. Collect a card (Stripe → customer → add payment method → set as default) and run again.' : 'No card on file. Collect it (Stripe → customer → add payment method → set as default) and run again.' });
 
     const ids = Array.isArray(locations) && locations.length ? locations : rec.locations.map(l => l.id);
     const qty = rec.locations.filter(l => ids.includes(l.id)).length;
@@ -55,17 +59,18 @@ module.exports = async (req, res) => {
       const c = await stripe.coupons.retrieve(rec.referral.couponId).catch(() => null);
       if (c && c.valid) { lockedCoupon = c.id; promoSource = 'referral (locked at signup)'; }
     }
-    if (!promo && !lockedCoupon && rec.offer) {
+    if (!promo && !lockedCoupon && tier) promoSource = `signup offer (${tier.tier === 'card' ? 'card at signup' : 'no card'})`;
+    if (!promo && !lockedCoupon && rec.offer && !tier) {
       promo = await promos.findActive(stripe, rec.offer.code);
       if (promo) promoSource = 'launch offer';
     }
-    const promoCode = promo ? promo.code : lockedCoupon ? rec.referral.code : null;
+    const promoCode = promo ? promo.code : lockedCoupon ? rec.referral.code : tier ? tier.code : null;
     // A code with a fixed free period (coupon metadata free_days / free_until) is applied as a trial that ends
     // `free_days` after go-live and never later than `free_until`. It replaces the coupon, so nothing stacks.
     const terms = promoSource && promoSource.startsWith('referral')
       ? (promo ? promos.freeTerms(promo.coupon) : (rec.referral.days ? { days: rec.referral.days, until: rec.referral.until || null } : null))
-      : null;
-    const trialEnd = terms ? promos.trialEnd(terms) : null;
+      : tier && !promo && !lockedCoupon ? { until: tier.until } : null;
+    const trialEnd = terms ? (tier && !promo && !lockedCoupon ? tierEnd : promos.trialEnd(terms)) : null;
     const windowClosed = !!terms && !trialEnd; // the free window ended before this store went live: no discount at all
 
     const existing = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 5 });
@@ -81,7 +86,7 @@ module.exports = async (req, res) => {
       sub = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: config.PRICE_ID, quantity: qty }],
-        default_payment_method: pm,
+        ...(pm ? { default_payment_method: pm } : { trial_settings: { end_behavior: { missing_payment_method: 'pause' } } }),
         collection_method: 'charge_automatically',
         automatic_tax: { enabled: true },
         ...(terms ? (trialEnd ? { trial_end: trialEnd } : {}) : promo ? { promotion_code: promo.id } : lockedCoupon ? { discounts: [{ coupon: lockedCoupon }] } : {}),

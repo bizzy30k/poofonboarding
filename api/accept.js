@@ -92,7 +92,10 @@ module.exports = async (req, res) => {
     rec.paymentMethod = si ? si.payment_method : null;
     rec.cardSkipped = !si;
     rec.billing = billing;
-    rec.offer = (si && config.offerActive()) ? { code: config.LAUNCH_OFFER.code, months: config.LAUNCH_OFFER.months, grantedAt: rec.acceptance.at } : null;
+    // signup.poof.ca: the free period depends only on whether a card was added now. No code is needed, and a code
+    // does not change it. Everywhere else keeps the launch offer.
+    if (rec.source === 'signup.poof.ca' && config.SIGNUP_OFFER.enabled) { rec.offer = require('../lib/offer').forSignup(!!si, rec.acceptance.at); rec.referral = null; }
+    else rec.offer = (si && config.offerActive()) ? { code: config.LAUNCH_OFFER.code, months: config.LAUNCH_OFFER.months, grantedAt: rec.acceptance.at } : null;
 
     // 3. Franchise guard — flag doors already on another customer (fail-open here; fail-closed at activation)
     const guard = await findConflicts(stripe, rec.locations.map(l => l.id), customerId, rec.owner.email);

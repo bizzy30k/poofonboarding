@@ -21,14 +21,16 @@ function confirmationProps(rec, customerId) {
   const live = [LIVE.pos.has(pos.toLowerCase()) ? pos : null, LIVE.processor.has(proc.toLowerCase()) ? proc : null].filter(Boolean);
   const pending = [pos && !LIVE.pos.has(pos.toLowerCase()) ? pos : null, proc && !LIVE.processor.has(proc.toLowerCase()) ? proc : null].filter(Boolean);
   const ref = rec.referral || null, n = rec.locations.length;
+  const tier = require('../lib/offer').lines(rec.offer);
   const until = ref && ref.until ? new Date(ref.until + 'T12:00:00Z').toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }) : '';
   return {
     order_form_url: `${config.SITE_URL}/api/orderform?c=${customerId}&t=${config.orderFormToken(customerId)}`,
     store: rec.store.chainName, locations: n, location_list: rec.locations.slice(0, 40).map(l => `${l.addr}, ${l.city}`),
     monthly_total: n * config.PRICE_CAD, price_per_location: config.PRICE_CAD,
     pos, processor: proc, live_integrations: live.join(' and '), pending_integrations: pending.join(' and '),
-    free_period: ref && ref.days ? `${ref.days} days` : ref && ref.months ? `${ref.months} months` : '',
-    free_until: until, discount_code: ref ? ref.code : '',
+    free_period: tier ? '' : ref && ref.days ? `${ref.days} days` : ref && ref.months ? `${ref.months} months` : '',
+    free_until: tier ? tier.until : until, discount_code: tier ? '' : ref ? ref.code : '',
+    offer_headline: tier ? tier.headline : '', offer_detail: tier ? tier.detail : '', card_on_file: !!rec.paymentMethod && !rec.cardSkipped,
     signed_by: (rec.acceptance && rec.acceptance.name) || '', terms_url: config.TERMS_URL,
   };
 }
@@ -91,7 +93,6 @@ module.exports = async (req, res) => {
       const q = [];
       if (entryStoreId) q.push('store=' + entryStoreId);
       const code = st && st.referral && /^[A-Za-z0-9_-]{2,32}$/.test(st.referral.code || '') ? String(st.referral.code).toUpperCase() : '';
-      if (code) q.push('code=' + code);
       resumeUrl = 'https://signup.poof.ca/' + (q.length ? '?' + q.join('&') : '');
     }
 

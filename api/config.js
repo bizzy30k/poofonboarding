@@ -9,6 +9,7 @@ module.exports = async (req, res) => {
     termsVersion: config.TERMS_VERSION,
     priceCad: config.PRICE_CAD,
     offer: config.offerActive() ? { months: config.LAUNCH_OFFER.months, until: config.LAUNCH_OFFER.until, label: config.LAUNCH_OFFER.label } : null,
+    signupOffer: config.SIGNUP_OFFER,
     calendly: config.CALENDLY_URL,
     sms: config.SMS_NUMBER,
     testimonial: config.TESTIMONIAL.quote ? config.TESTIMONIAL : null,
